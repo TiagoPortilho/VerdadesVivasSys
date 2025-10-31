@@ -4,6 +4,7 @@
  */
 package verdadesvivassys.views;
 
+import verdadesvivassys.connection.DatabaseConfig;
 /**
  *
  * @author ADM
@@ -17,6 +18,7 @@ public class Menu extends javax.swing.JFrame {
      */
     public Menu() {
         initComponents();
+        DatabaseConfig.initialize();
     }
 
     /**
