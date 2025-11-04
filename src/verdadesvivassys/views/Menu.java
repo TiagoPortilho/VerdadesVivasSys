@@ -4,8 +4,10 @@ import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import verdadesvivassys.connection.DatabaseConfig;
+import verdadesvivassys.dao.ClientesDAO;
 import verdadesvivassys.dao.DAOFactory;
 import verdadesvivassys.dao.LivrosDAO;
+import verdadesvivassys.model.Cliente;
 import verdadesvivassys.model.Livro;
 
 public class Menu extends javax.swing.JFrame {
@@ -13,6 +15,7 @@ public class Menu extends javax.swing.JFrame {
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Menu.class.getName());
 
     private LivrosDAO livrosDAO = DAOFactory.getLivrosDAO();
+    private ClientesDAO clientesDAO = DAOFactory.getClientesDAO();
 
     public Menu() {
         initComponents();
@@ -25,9 +28,9 @@ public class Menu extends javax.swing.JFrame {
 
                 switch (abaSelecionada) {
                     case 0 ->
-                        carregarClientesNaTabela();
-                    case 1 ->
                         carregarVendasNaTabela();
+                    case 1 ->
+                        carregarClientesNaTabela();
                     case 2 ->
                         carregarLivrosNaTabela();
                     default -> {
@@ -68,7 +71,29 @@ public class Menu extends javax.swing.JFrame {
     }
     
     // =================**Clientes**=================
-    private void carregarClientesNaTabela() {}
+    private void carregarClientesNaTabela() {
+        List<Cliente> clientes = clientesDAO.getAllClientes();
+        
+        DefaultTableModel model = (DefaultTableModel) tblClientes.getModel();
+        model.setRowCount(0);
+        
+        for (Cliente cliente : clientes){
+            model.addRow(new Object[]{
+                cliente.getId(),
+                cliente.getNome(),
+                cliente.getCidade(),
+                cliente.getContato()
+            });
+        }
+    }
+    
+    private int getIdClienteSelecionado(){
+        int row = tblClientes.getSelectedRow();
+        if (row < 0){
+            return -1;
+        }
+        return (int) tblClientes.getValueAt(row, 0);
+    }
     
     
     // =================**Vendas**=================
@@ -224,6 +249,11 @@ public class Menu extends javax.swing.JFrame {
 
         btnDeleteClientes.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         btnDeleteClientes.setText("Deletar");
+        btnDeleteClientes.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnDeleteClientesActionPerformed(evt);
+            }
+        });
 
         btnNewClientes.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         btnNewClientes.setText("Novo Cliente");
@@ -235,6 +265,11 @@ public class Menu extends javax.swing.JFrame {
 
         btnUpdateClientes.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         btnUpdateClientes.setText("Atualizar");
+        btnUpdateClientes.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnUpdateClientesActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -366,14 +401,16 @@ public class Menu extends javax.swing.JFrame {
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
                 .addComponent(jTabbedPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 756, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(jTabbedPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 535, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, Short.MAX_VALUE))
+                .addContainerGap())
         );
 
         pack();
@@ -384,7 +421,7 @@ public class Menu extends javax.swing.JFrame {
     }//GEN-LAST:event_btnNewVendasActionPerformed
 
     private void btnNewClientesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNewClientesActionPerformed
-        // TODO add your handling code here:
+        new ClienteForm().setVisible(true);
     }//GEN-LAST:event_btnNewClientesActionPerformed
 
     private void btnNewLivrosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNewLivrosActionPerformed
@@ -407,7 +444,7 @@ public class Menu extends javax.swing.JFrame {
         int idlivro = getIdLivroSelecionado();
         if (idlivro >= 0) {
             int continuar = JOptionPane.showConfirmDialog(this,
-                    "Tem certeza que deseja deletar o feedback selecionado?",
+                    "Tem certeza que deseja deletar o livro selecionado?",
                     "Confirmar Deleção",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.QUESTION_MESSAGE);
@@ -424,6 +461,40 @@ public class Menu extends javax.swing.JFrame {
                     javax.swing.JOptionPane.WARNING_MESSAGE);
         }
     }//GEN-LAST:event_btnDeleteLivrosActionPerformed
+
+    private void btnDeleteClientesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDeleteClientesActionPerformed
+        int idcliente = getIdClienteSelecionado();
+        if (idcliente >= 0) {
+            int continuar = JOptionPane.showConfirmDialog(this,
+                    "Tem certeza que deseja deletar o cliente selecionado?",
+                    "Confirmar Deleção",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE);
+
+            if (continuar == JOptionPane.YES_OPTION) {
+                clientesDAO.deleteCliente(idcliente);
+                carregarClientesNaTabela();
+            }
+
+        } else {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Selecione um cliente na tabela",
+                    "Erro de identificação",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+        }
+    }//GEN-LAST:event_btnDeleteClientesActionPerformed
+
+    private void btnUpdateClientesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUpdateClientesActionPerformed
+        int idcliente = getIdClienteSelecionado();
+        if (idcliente >= 0) {
+            new ClienteForm(clientesDAO.getClienteById(idcliente)).setVisible(true);
+        } else {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Selecione um cliente na tabela",
+                    "Erro de identificação",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+        }
+    }//GEN-LAST:event_btnUpdateClientesActionPerformed
 
     /**
      * @param args the command line arguments

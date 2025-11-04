@@ -4,37 +4,37 @@
  */
 package verdadesvivassys.views;
 
-import verdadesvivassys.model.Livro;
+import verdadesvivassys.model.Cliente;
 
 /**
  *
  * @author ADM
  */
-public class LivroForm extends javax.swing.JFrame {
+public class ClienteForm extends javax.swing.JFrame {
 
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(LivroForm.class.getName());
+    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(ClienteForm.class.getName());
     private int editId = -1;
 
-    public LivroForm() {
+    public ClienteForm() {
         initComponents();
     }
 
-    public LivroForm(Livro livro) {
+    public ClienteForm(Cliente cliente) {
         initComponents();
-        lblTitulo.setText("Editar Livro");
-        txtNome.setText(livro.getNome());
-        txtCodigo.setText(livro.getCodigo());
-        txtValor.setText(String.valueOf(livro.getValor()));
-        this.editId = livro.getId();
+        lblTitulo.setText("Editar Cliente");
+        txtCidade.setText(cliente.getCidade());
+        txtNome.setText(cliente.getNome());
+        txtContato.setText(cliente.getContato());
+        this.editId = cliente.getId();
 
     }
 
     private boolean verify() {
         try {
             // Verifica campos vazios
-            if (txtCodigo.getText().trim().isEmpty()
-                    || txtNome.getText().trim().isEmpty()
-                    || txtValor.getText().trim().isEmpty()) {
+            if (txtNome.getText().trim().isEmpty()
+                    || txtCidade.getText().trim().isEmpty()
+                    || txtContato.getText().trim().isEmpty()) {
                 javax.swing.JOptionPane.showMessageDialog(this,
                         "Todos os campos devem ser preenchidos.",
                         "Erro de validação",
@@ -42,38 +42,31 @@ public class LivroForm extends javax.swing.JFrame {
                 return false;
             }
 
-            // Verifica se o valor é numérico e positivo
-            float valor;
-            try {
-                valor = Float.parseFloat(txtValor.getText().replace(",", "."));
-                if (valor < 0) {
-                    javax.swing.JOptionPane.showMessageDialog(this,
-                            "O valor não pode ser negativo.",
-                            "Erro de validação",
-                            javax.swing.JOptionPane.WARNING_MESSAGE);
-                    return false;
-                }
-            } catch (NumberFormatException e) {
+            // Valida nome (somente letras, espaços e acentuação)
+            String nome = txtNome.getText().trim();
+            if (!nome.matches("[A-Za-zÀ-ÖØ-öø-ÿ\\s\\-']+")) {
                 javax.swing.JOptionPane.showMessageDialog(this,
-                        "O campo Valor deve conter apenas números válidos.",
+                        "O nome contém caracteres inválidos. Use apenas letras e espaços.",
                         "Erro de validação",
                         javax.swing.JOptionPane.WARNING_MESSAGE);
                 return false;
             }
 
-            // Verifica caracteres inválidos no código e nome
-            String codigo = txtCodigo.getText().trim();
-            String nome = txtNome.getText().trim();
-            if (!codigo.matches("[A-Za-z0-9\\-]+")) {
+            // Valida cidade (aceita letras, espaços e acentuação)
+            String cidade = txtCidade.getText().trim();
+            if (!cidade.matches("[A-Za-zÀ-ÖØ-öø-ÿ\\s\\-']+")) {
                 javax.swing.JOptionPane.showMessageDialog(this,
-                        "O código só pode conter letras, números e traços.",
+                        "A cidade contém caracteres inválidos.",
                         "Erro de validação",
                         javax.swing.JOptionPane.WARNING_MESSAGE);
                 return false;
             }
-            if (!nome.matches("[A-Za-zÀ-ÖØ-öø-ÿ0-9\\s\\-\\,\\.\\(\\)/:!]+")) {
+
+            // Valida contato (aceita números, +, -, espaços, parênteses)
+            String contato = txtContato.getText().trim();
+            if (!contato.matches("[0-9\\+\\-\\s\\(\\)]+")) {
                 javax.swing.JOptionPane.showMessageDialog(this,
-                        "O nome contém caracteres inválidos.",
+                        "O contato contém caracteres inválidos. Use apenas números e símbolos de telefone.",
                         "Erro de validação",
                         javax.swing.JOptionPane.WARNING_MESSAGE);
                 return false;
@@ -83,7 +76,7 @@ public class LivroForm extends javax.swing.JFrame {
             return true;
 
         } catch (Exception e) {
-            logger.log(java.util.logging.Level.SEVERE, "Erro na verificação de dados", e);
+            logger.log(java.util.logging.Level.SEVERE, "Erro na verificação de dados do cliente", e);
             javax.swing.JOptionPane.showMessageDialog(this,
                     "Erro inesperado durante a verificação.",
                     "Erro",
@@ -92,67 +85,67 @@ public class LivroForm extends javax.swing.JFrame {
         }
     }
 
-    private void addLivro() {
+    private void addCliente() {
         try {
-            // 1️⃣ Primeiro, valida os campos
+            // 1️⃣ Valida os campos
             if (!verify()) {
                 return;
             }
 
             // 2️⃣ Pega os valores validados
-            String codigo = txtCodigo.getText().trim();
             String nome = txtNome.getText().trim();
-            float valor = Float.parseFloat(txtValor.getText().replace(",", "."));
+            String cidade = txtCidade.getText().trim();
+            String contato = txtContato.getText().trim();
 
-            // 3️⃣ Cria o objeto Livro
-            Livro livro = new Livro();
-            livro.setCodigo(codigo);
-            livro.setNome(nome);
-            livro.setValor(valor);
+            // 3️⃣ Cria o objeto Cliente
+            Cliente cliente = new Cliente();
+            cliente.setNome(nome);
+            cliente.setCidade(cidade);
+            cliente.setContato(contato);
 
             boolean sucesso;
 
             // 4️⃣ Verifica se é inserção ou edição
             if (editId == -1) {
                 // Novo cadastro
-                sucesso = verdadesvivassys.dao.DAOFactory.getLivrosDAO().insertLivro(livro);
+                sucesso = verdadesvivassys.dao.DAOFactory.getClientesDAO().insertCliente(cliente);
             } else {
-                // Atualização de livro existente
-                livro.setId(editId);
-                sucesso = verdadesvivassys.dao.DAOFactory.getLivrosDAO().updateLivro(livro);
+                // Atualização de cliente existente
+                cliente.setId(editId);
+                sucesso = verdadesvivassys.dao.DAOFactory.getClientesDAO().updateCliente(cliente);
             }
 
             // 5️⃣ Feedback ao usuário
             if (sucesso) {
                 if (editId == -1) {
-                    javax.swing.JOptionPane.showMessageDialog(this, "Livro cadastrado com sucesso!");
+                    javax.swing.JOptionPane.showMessageDialog(this, "Cliente cadastrado com sucesso!");
                     clearFields();
                     this.dispose();
                 } else {
-                    javax.swing.JOptionPane.showMessageDialog(this, "Livro atualizado com sucesso!");
+                    javax.swing.JOptionPane.showMessageDialog(this, "Cliente atualizado com sucesso!");
                     this.dispose(); // fecha a janela de edição
                 }
             } else {
                 javax.swing.JOptionPane.showMessageDialog(this,
-                        "Falha ao salvar o livro. Verifique os dados e tente novamente.",
+                        "Falha ao salvar o cliente. Verifique os dados e tente novamente.",
                         "Erro",
                         javax.swing.JOptionPane.ERROR_MESSAGE);
             }
 
         } catch (Exception e) {
-            logger.log(java.util.logging.Level.SEVERE, "Erro ao salvar livro", e);
+            logger.log(java.util.logging.Level.SEVERE, "Erro ao salvar cliente", e);
             javax.swing.JOptionPane.showMessageDialog(this,
-                    "Erro inesperado ao salvar o livro: " + e.getMessage(),
+                    "Erro inesperado ao salvar o cliente: " + e.getMessage(),
                     "Erro",
                     javax.swing.JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void clearFields() {
-        txtCodigo.setText("");
         txtNome.setText("");
-        txtValor.setText("");
-        txtCodigo.requestFocus(); // volta o foco pro primeiro campo
+        txtCidade.setText("");
+        txtContato.setText("");
+        txtNome.requestFocus(); // volta o foco pro primeiro campo
     }
 
     @SuppressWarnings("unchecked")
@@ -160,34 +153,34 @@ public class LivroForm extends javax.swing.JFrame {
     private void initComponents() {
 
         lblTitulo = new javax.swing.JLabel();
-        lblCodigo = new javax.swing.JLabel();
         lblNome = new javax.swing.JLabel();
-        lblValor = new javax.swing.JLabel();
-        txtCodigo = new javax.swing.JTextField();
+        lblCidade = new javax.swing.JLabel();
+        lblContato = new javax.swing.JLabel();
         txtNome = new javax.swing.JTextField();
-        txtValor = new javax.swing.JTextField();
+        txtCidade = new javax.swing.JTextField();
+        txtContato = new javax.swing.JTextField();
         btnConfirmar = new javax.swing.JButton();
         btnLimpar = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
 
         lblTitulo.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
-        lblTitulo.setText("Novo Livro");
-
-        lblCodigo.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
-        lblCodigo.setText("Código:");
+        lblTitulo.setText("Novo Cliente");
 
         lblNome.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
-        lblNome.setText("Nome:");
+        lblNome.setText("Nome");
 
-        lblValor.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
-        lblValor.setText("Valor:");
+        lblCidade.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        lblCidade.setText("Cidade");
 
-        txtCodigo.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        lblContato.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        lblContato.setText("Contato");
 
         txtNome.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
 
-        txtValor.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        txtCidade.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+
+        txtContato.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
 
         btnConfirmar.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         btnConfirmar.setText("Confirmar");
@@ -223,15 +216,15 @@ public class LivroForm extends javax.swing.JFrame {
                                 .addComponent(btnConfirmar))
                             .addGroup(layout.createSequentialGroup()
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                    .addComponent(lblCodigo)
-                                    .addComponent(lblNome, javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(lblValor, javax.swing.GroupLayout.Alignment.LEADING))
+                                    .addComponent(lblCidade, javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(lblContato, javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(lblNome, javax.swing.GroupLayout.Alignment.LEADING))
                                 .addGap(18, 18, 18)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(txtCodigo, javax.swing.GroupLayout.PREFERRED_SIZE, 240, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addComponent(txtNome, javax.swing.GroupLayout.PREFERRED_SIZE, 240, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(txtValor, javax.swing.GroupLayout.PREFERRED_SIZE, 240, javax.swing.GroupLayout.PREFERRED_SIZE))))))
-                .addContainerGap(79, Short.MAX_VALUE))
+                                    .addComponent(txtCidade, javax.swing.GroupLayout.PREFERRED_SIZE, 240, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(txtContato, javax.swing.GroupLayout.PREFERRED_SIZE, 240, javax.swing.GroupLayout.PREFERRED_SIZE))))))
+                .addContainerGap(78, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -240,28 +233,28 @@ public class LivroForm extends javax.swing.JFrame {
                 .addComponent(lblTitulo)
                 .addGap(57, 57, 57)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(lblCodigo)
-                    .addComponent(txtCodigo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(27, 27, 27)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(lblNome)
                     .addComponent(txtNome, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(27, 27, 27)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblCidade)
+                    .addComponent(txtCidade, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(23, 23, 23)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(lblValor)
-                    .addComponent(txtValor, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(59, 59, 59)
+                    .addComponent(lblContato)
+                    .addComponent(txtContato, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 88, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnConfirmar)
                     .addComponent(btnLimpar))
-                .addContainerGap(62, Short.MAX_VALUE))
+                .addGap(33, 33, 33))
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnConfirmarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConfirmarActionPerformed
-        addLivro();
+        addCliente();
     }//GEN-LAST:event_btnConfirmarActionPerformed
 
     private void btnLimparActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimparActionPerformed
@@ -290,18 +283,18 @@ public class LivroForm extends javax.swing.JFrame {
         //</editor-fold>
 
         /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> new LivroForm().setVisible(true));
+        java.awt.EventQueue.invokeLater(() -> new ClienteForm().setVisible(true));
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnConfirmar;
     private javax.swing.JButton btnLimpar;
-    private javax.swing.JLabel lblCodigo;
+    private javax.swing.JLabel lblCidade;
+    private javax.swing.JLabel lblContato;
     private javax.swing.JLabel lblNome;
     private javax.swing.JLabel lblTitulo;
-    private javax.swing.JLabel lblValor;
-    private javax.swing.JTextField txtCodigo;
+    private javax.swing.JTextField txtCidade;
+    private javax.swing.JTextField txtContato;
     private javax.swing.JTextField txtNome;
-    private javax.swing.JTextField txtValor;
     // End of variables declaration//GEN-END:variables
 }
