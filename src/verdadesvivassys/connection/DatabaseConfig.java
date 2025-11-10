@@ -1,54 +1,68 @@
 package verdadesvivassys.connection;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 public class DatabaseConfig {
     private static final String URL = "jdbc:sqlite:verdadesvivas.db";
 
-    public static void initialize(){
+    public static void initialize() {
         try (Connection conn = DriverManager.getConnection(URL);
              Statement stmt = conn.createStatement()) {
 
-            String createClienteTable = "CREATE TABLE IF NOT EXISTS Cliente (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "Nome TEXT NOT NULL," +
-                    "Cidade TEXT NOT NULL," +
-                    "Contato TEXT NOT NULL);";
-
+            // 🧱 Cria tabela Cliente
+            String createClienteTable = """
+                CREATE TABLE IF NOT EXISTS Cliente (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Nome TEXT NOT NULL,
+                    Cidade TEXT NOT NULL,
+                    Contato TEXT NOT NULL
+                );
+            """;
             stmt.execute(createClienteTable);
 
-            String createLivroTable = "CREATE TABLE IF NOT EXISTS Livro (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "codigo TEXT," +
-                    "Nome TEXT NOT NULL," +
-                    "Valor REAL NOT NULL);";
+            // 📚 Cria tabela Livro
+            String createLivroTable = """
+                CREATE TABLE IF NOT EXISTS Livro (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    codigo TEXT,
+                    Nome TEXT NOT NULL,
+                    Valor REAL NOT NULL
+                );
+            """;
             stmt.execute(createLivroTable);
 
-            String createVendaTable = "CREATE TABLE IF NOT EXISTS Venda (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "cliente_id INTEGER NOT NULL," +
-                    "FOREIGN KEY(cliente_id) REFERENCES Cliente(id));";
+            // 💰 Cria tabela Venda
+            String createVendaTable = """
+                CREATE TABLE IF NOT EXISTS Venda (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    cliente_id INTEGER NOT NULL,
+                    total REAL NOT NULL DEFAULT 0,
+                    FOREIGN KEY(cliente_id) REFERENCES Cliente(id)
+                );
+            """;
             stmt.execute(createVendaTable);
 
-            String createVendaLivroTable = "CREATE TABLE IF NOT EXISTS Venda_Livro (" +
-                    "venda_id INTEGER NOT NULL," +
-                    "livro_id INTEGER NOT NULL," +
-                    "FOREIGN KEY(venda_id) REFERENCES Venda(id)," +
-                    "FOREIGN KEY(livro_id) REFERENCES Livro(id));";
+            // 🔗 Cria tabela intermediária Venda_Livro (N:N)
+            String createVendaLivroTable = """
+                CREATE TABLE IF NOT EXISTS Venda_Livro (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    venda_id INTEGER NOT NULL,
+                    livro_id INTEGER NOT NULL,
+                    quantidade INTEGER NOT NULL DEFAULT 1,
+                    FOREIGN KEY (venda_id) REFERENCES Venda(id) ON DELETE CASCADE,
+                    FOREIGN KEY (livro_id) REFERENCES Livro(id)
+                );
+            """;
             stmt.execute(createVendaLivroTable);
 
-            System.out.println("Tabelas criadas com sucesso (se não existirem).");
+            System.out.println("✅ Tabelas criadas/atualizadas com sucesso.");
 
-
+            // 📦 Verifica se os livros já existem
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) AS total FROM Livro;");
             int total = rs.getInt("total");
 
             if (total == 0) {
-                System.out.println("Inserindo livros no banco...");
+                System.out.println("📚 Inserindo livros no banco...");
                 String insertLivros = """
                     INSERT INTO Livro (codigo, Nome, Valor) VALUES
                     ('B01','Romanos - (Brochura)',39.6),
@@ -93,7 +107,7 @@ public class DatabaseConfig {
                     ('CMM','Mini Cal. Mesa - 4 pág COM 10',5),
                     ('CP4','Calendário de Parede - 4 pág.',1),
                     ('CPA','Calendário de Parede - 12 pág.',1),
-                    (NULL,'Pacote Econômico com 100 folhetos',5),
+                    ('P01','Pacote Econômico com 100 folhetos',5),
                     ('EC1','Pacote Econômico com 1000 folhetos',43.5),
                     ('EC4','Pacote Econômico com 4000 folhetos',165),
                     ('EC8','Pacote Econômico com 8000 folhetos',320),
@@ -145,32 +159,36 @@ public class DatabaseConfig {
                     ('V71','Carta aos Evangelistas',12.8),
                     ('V72','A Obra do Evangelho',14.3),
                     ('V73','O Caminho de Deus para Descanso',9),
-                    (NULL,'definições doutrinais',40),
-                    (NULL,'HINARIO CRIANÇA',6),
-                    (NULL,'cinco cartas - pizi',35),
-                    (NULL,'Profetas menores - 1 Reis',37.5),
-                    (NULL,'Profetas menores - 2 Reis',46.5),
-                    (NULL,'Profetas menores - Profeta volume 1',25),
-                    (NULL,'Profetas menores - Crescimento Cristão',9),
-                    (NULL,'Profetas menores - Rute',9),
-                    (NULL,'Profetas menores - Ester',6.5),
-                    (NULL,'Hinário novo capa mole',15),
-                    (NULL,'Hinário novo capa dura',28),
-                    (NULL,'Evangelho de Lucas',38),
-                    (NULL,'Cuidado Fraterno e ofença pessoal',2.5),
-                    (NULL,'Os dias iniciais',5),
-                    (NULL,'O que é a ceia do Senhor',3),
-                    (NULL,'GRAÇA',10),
-                    (NULL,'TEOLOGIA DO PACTO',40.5);
+                    ('D01','definições doutrinais',40),
+                    ('HIC','HINARIO CRIANÇA',6),
+                    ('PCP','cinco cartas - pizi',35),
+                    ('PM1','Profetas menores - 1 Reis',37.5),
+                    ('PM2','Profetas menores - 2 Reis',46.5),
+                    ('PM3','Profetas menores - Profeta volume 1',25),
+                    ('PMC','Profetas menores - Crescimento Cristão',9),
+                    ('PMR','Profetas menores - Rute',9),
+                    ('PME','Profetas menores - Ester',6.5),
+                    ('HNM','Hinário novo capa mole',15),
+                    ('HND','Hinário novo capa dura',28),
+                    ('EGL','Evangelho de Lucas',38),
+                    ('CFP','Cuidado Fraterno e ofença pessoal',2.5),
+                    ('DIN','Os dias iniciais',5),
+                    ('CES','O que é a ceia do Senhor',3),
+                    ('GRA','GRAÇA',10),
+                    ('TPA','TEOLOGIA DO PACTO',40.5);
                 """;
                 stmt.execute(insertLivros);
                 System.out.println("✅ Livros inseridos com sucesso!");
             } else {
-                System.out.println("Livros já existem no banco. Inserção ignorada.");
+                System.out.println("📘 Livros já existem no banco. Inserção ignorada.");
             }
 
         } catch (SQLException e) {
-            System.out.println("Erro ao inicializar o banco de dados: " + e.getMessage());
+            System.out.println("❌ Erro ao inicializar o banco de dados: " + e.getMessage());
         }
+    }
+
+    public static Connection connect() throws SQLException {
+        return DriverManager.getConnection(URL);
     }
 }

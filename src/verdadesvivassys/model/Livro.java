@@ -6,6 +6,7 @@ public class Livro {
     private String codigo;
     private String nome;
     private float valor;
+    private int quantidade = 1; // ✅ novo campo
 
     public Livro(){}
 
@@ -14,6 +15,15 @@ public class Livro {
         this.codigo = codigo;
         this.nome = nome;
         this.valor = valor;
+        this.quantidade = 1;
+    }
+
+    public int getQuantidade() {
+        return quantidade;
+    }
+
+    public void setQuantidade(int quantidade) {
+        this.quantidade = quantidade;
     }
 
     public int getId() {

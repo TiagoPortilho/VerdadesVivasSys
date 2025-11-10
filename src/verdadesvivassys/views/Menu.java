@@ -1,14 +1,18 @@
 package verdadesvivassys.views;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import verdadesvivassys.connection.DatabaseConfig;
 import verdadesvivassys.dao.ClientesDAO;
 import verdadesvivassys.dao.DAOFactory;
 import verdadesvivassys.dao.LivrosDAO;
+import verdadesvivassys.dao.VendasDAO;
 import verdadesvivassys.model.Cliente;
 import verdadesvivassys.model.Livro;
+import verdadesvivassys.model.Venda;
 
 public class Menu extends javax.swing.JFrame {
 
@@ -16,10 +20,13 @@ public class Menu extends javax.swing.JFrame {
 
     private LivrosDAO livrosDAO = DAOFactory.getLivrosDAO();
     private ClientesDAO clientesDAO = DAOFactory.getClientesDAO();
+    private VendasDAO vendasDAO = DAOFactory.getVendasDAO();
 
     public Menu() {
+        new DatabaseConfig().initialize();
         initComponents();
         carregarLivrosNaTabela();
+        carregarClientesNaTabela();
 
         this.addWindowFocusListener(new java.awt.event.WindowFocusListener() {
             @Override
@@ -69,15 +76,15 @@ public class Menu extends javax.swing.JFrame {
         }
         return (int) tblLivros.getValueAt(row, 0);
     }
-    
+
     // =================**Clientes**=================
     private void carregarClientesNaTabela() {
         List<Cliente> clientes = clientesDAO.getAllClientes();
-        
+
         DefaultTableModel model = (DefaultTableModel) tblClientes.getModel();
         model.setRowCount(0);
-        
-        for (Cliente cliente : clientes){
+
+        for (Cliente cliente : clientes) {
             model.addRow(new Object[]{
                 cliente.getId(),
                 cliente.getNome(),
@@ -86,27 +93,63 @@ public class Menu extends javax.swing.JFrame {
             });
         }
     }
-    
-    private int getIdClienteSelecionado(){
+
+    private int getIdClienteSelecionado() {
         int row = tblClientes.getSelectedRow();
-        if (row < 0){
+        if (row < 0) {
             return -1;
         }
         return (int) tblClientes.getValueAt(row, 0);
     }
-    
-    
+
     // =================**Vendas**=================
-    private void carregarVendasNaTabela() {}
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    private void carregarVendasNaTabela() {
+        List<Venda> vendas = vendasDAO.getAllVendas();
+
+        DefaultTableModel model = (DefaultTableModel) tblVendas.getModel();
+        model.setRowCount(0); // limpa as linhas
+
+        for (Venda venda : vendas) {
+            String nomeCliente = venda.getCliente() != null ? venda.getCliente().getNome() : "—";
+
+            // monta nomes com somatório de quantidade por livro
+            String nomesLivrosFormatados = "—";
+
+            if (venda.getLivros() != null && !venda.getLivros().isEmpty()) {
+                // soma quantidade por nome (caso o DAO já retorne quantidade)
+                Map<String, Integer> mapaQtd = venda.getLivros().stream()
+                        .collect(Collectors.toMap(
+                                Livro::getNome,
+                                l -> l.getQuantidade(), // valor inicial
+                                Integer::sum // se tiver mesmo nome, soma
+                        ));
+
+                nomesLivrosFormatados = mapaQtd.entrySet().stream()
+                        .map(e -> {
+                            String nome = e.getKey();
+                            int qtd = e.getValue();
+                            return qtd > 1 ? nome + " (x" + qtd + ")" : nome;
+                        })
+                        .collect(Collectors.joining(", "));
+            }
+
+            model.addRow(new Object[]{
+                venda.getId(),
+                nomeCliente,
+                nomesLivrosFormatados,
+                String.format("R$ %.2f", venda.getTotal())
+            });
+        }
+    }
+
+    private int getIdVendaSelecionada() {
+        int row = tblVendas.getSelectedRow();
+        if (row < 0) {
+            return -1;
+        }
+        return (int) tblVendas.getValueAt(row, 0);
+    }
+
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -169,6 +212,11 @@ public class Menu extends javax.swing.JFrame {
 
         btnDeleteVendas.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         btnDeleteVendas.setText("Deletar");
+        btnDeleteVendas.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnDeleteVendasActionPerformed(evt);
+            }
+        });
 
         btnNewVendas.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         btnNewVendas.setText("Nova Venda");
@@ -180,6 +228,11 @@ public class Menu extends javax.swing.JFrame {
 
         btnUpdateVendas.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         btnUpdateVendas.setText("Atualizar");
+        btnUpdateVendas.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnUpdateVendasActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -417,7 +470,7 @@ public class Menu extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnNewVendasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNewVendasActionPerformed
-        // TODO add your handling code here:
+        new VendaForm().setVisible(true);
     }//GEN-LAST:event_btnNewVendasActionPerformed
 
     private void btnNewClientesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNewClientesActionPerformed
@@ -495,6 +548,39 @@ public class Menu extends javax.swing.JFrame {
                     javax.swing.JOptionPane.WARNING_MESSAGE);
         }
     }//GEN-LAST:event_btnUpdateClientesActionPerformed
+
+    private void btnDeleteVendasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDeleteVendasActionPerformed
+        int idvenda = getIdVendaSelecionada();
+        if (idvenda >= 0) {
+            int continuar = JOptionPane.showConfirmDialog(this,
+                    "Tem certeza que deseja deletar a venda selecionada?",
+                    "Confirmar Deleção",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE);
+
+            if (continuar == JOptionPane.YES_OPTION) {
+                vendasDAO.deleteVenda(idvenda);
+                carregarVendasNaTabela();
+            }
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "Selecione uma venda na tabela",
+                    "Erro de identificação",
+                    JOptionPane.WARNING_MESSAGE);
+        }
+    }//GEN-LAST:event_btnDeleteVendasActionPerformed
+
+    private void btnUpdateVendasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUpdateVendasActionPerformed
+        int idvenda = getIdVendaSelecionada();
+        if (idvenda >= 0) {
+            new VendaForm(vendasDAO.getVendaById(idvenda)).setVisible(true);
+        } else {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Selecione um livro na tabela",
+                    "Erro de identificação",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+        }
+    }//GEN-LAST:event_btnUpdateVendasActionPerformed
 
     /**
      * @param args the command line arguments
