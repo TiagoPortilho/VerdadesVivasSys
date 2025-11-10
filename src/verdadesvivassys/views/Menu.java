@@ -211,7 +211,7 @@ public class Menu extends javax.swing.JFrame {
         lblVendas.setText("Vendas");
 
         btnDeleteVendas.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        btnDeleteVendas.setText("Deletar");
+        btnDeleteVendas.setText("- Deletar");
         btnDeleteVendas.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnDeleteVendasActionPerformed(evt);
@@ -219,7 +219,7 @@ public class Menu extends javax.swing.JFrame {
         });
 
         btnNewVendas.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        btnNewVendas.setText("Nova Venda");
+        btnNewVendas.setText("+ Nova Venda");
         btnNewVendas.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnNewVendasActionPerformed(evt);
@@ -301,7 +301,7 @@ public class Menu extends javax.swing.JFrame {
         lblClientes.setText("Clientes");
 
         btnDeleteClientes.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        btnDeleteClientes.setText("Deletar");
+        btnDeleteClientes.setText("- Deletar");
         btnDeleteClientes.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnDeleteClientesActionPerformed(evt);
@@ -309,7 +309,7 @@ public class Menu extends javax.swing.JFrame {
         });
 
         btnNewClientes.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        btnNewClientes.setText("Novo Cliente");
+        btnNewClientes.setText("+ Novo Cliente");
         btnNewClientes.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnNewClientesActionPerformed(evt);
@@ -391,7 +391,7 @@ public class Menu extends javax.swing.JFrame {
         lblLivros.setText("Livros");
 
         btnDeleteLivros.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        btnDeleteLivros.setText("Deletar");
+        btnDeleteLivros.setText("- Deletar");
         btnDeleteLivros.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnDeleteLivrosActionPerformed(evt);
@@ -399,7 +399,7 @@ public class Menu extends javax.swing.JFrame {
         });
 
         btnNewLivros.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        btnNewLivros.setText("Novo Livro");
+        btnNewLivros.setText("+ Novo Livro");
         btnNewLivros.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnNewLivrosActionPerformed(evt);
