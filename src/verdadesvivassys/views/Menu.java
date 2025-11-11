@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
+import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import verdadesvivassys.connection.DatabaseConfig;
 import verdadesvivassys.dao.ClientesDAO;
 import verdadesvivassys.dao.DAOFactory;
@@ -25,8 +26,23 @@ public class Menu extends javax.swing.JFrame {
     public Menu() {
         new DatabaseConfig().initialize();
         initComponents();
+
         carregarLivrosNaTabela();
         carregarClientesNaTabela();
+        carregarVendasNaTabela();
+
+        loadClientes();
+        loadLivros();
+        loadCidades();
+
+        AutoCompleteDecorator.decorate(cmbCliente);
+        AutoCompleteDecorator.decorate(cmbLivros);
+        AutoCompleteDecorator.decorate(cmbCidades);
+        AutoCompleteDecorator.decorate(cmbClientes2);
+        AutoCompleteDecorator.decorate(cmbCidades2);
+        AutoCompleteDecorator.decorate(cmbLivros);
+        AutoCompleteDecorator.decorate(cmbNomeLivro);
+        AutoCompleteDecorator.decorate(cmbCodigoLivro);
 
         this.addWindowFocusListener(new java.awt.event.WindowFocusListener() {
             @Override
@@ -77,6 +93,32 @@ public class Menu extends javax.swing.JFrame {
         return (int) tblLivros.getValueAt(row, 0);
     }
 
+    private void loadLivros() {
+        cmbLivros.removeAllItems();
+        cmbNomeLivro.removeAllItems();
+        cmbCodigoLivro.removeAllItems();
+
+        for (Livro l : livrosDAO.getAllLivros()) {
+            if (l != null) {
+                if (l.getNome() != null && !l.getNome().isBlank()) {
+                    cmbLivros.addItem(l.getNome());
+                    cmbNomeLivro.addItem(l.getNome());
+                }
+                if (l.getCodigo() != null && !l.getCodigo().isBlank()) {
+                    cmbCodigoLivro.addItem(l.getCodigo());
+                }
+            }
+        }
+
+        AutoCompleteDecorator.decorate(cmbLivros);
+        AutoCompleteDecorator.decorate(cmbNomeLivro);
+        AutoCompleteDecorator.decorate(cmbCodigoLivro);
+
+        cmbLivros.setSelectedIndex(-1);
+        cmbNomeLivro.setSelectedIndex(-1);
+        cmbCodigoLivro.setSelectedIndex(-1);
+    }
+
     // =================**Clientes**=================
     private void carregarClientesNaTabela() {
         List<Cliente> clientes = clientesDAO.getAllClientes();
@@ -100,6 +142,47 @@ public class Menu extends javax.swing.JFrame {
             return -1;
         }
         return (int) tblClientes.getValueAt(row, 0);
+    }
+
+    private void loadClientes() {
+        cmbCliente.removeAllItems();
+        cmbClientes2.removeAllItems(); // novo
+
+        for (Cliente c : clientesDAO.getAllClientes()) {
+            if (c != null && c.getNome() != null && !c.getNome().isBlank()) {
+                cmbCliente.addItem(c.getNome());
+                cmbClientes2.addItem(c.getNome()); // adiciona no segundo combo também
+            }
+        }
+
+        // aplicar autocomplete nos dois
+        AutoCompleteDecorator.decorate(cmbCliente);
+        AutoCompleteDecorator.decorate(cmbClientes2);
+
+        cmbCliente.setSelectedIndex(-1);
+        cmbClientes2.setSelectedIndex(-1);
+    }
+
+    private void loadCidades() {
+        cmbCidades.removeAllItems();
+        cmbCidades2.removeAllItems();
+
+        List<String> cidades = clientesDAO.getAllCidades().stream()
+                .filter(c -> c != null && !c.isBlank())
+                .distinct()
+                .sorted(String::compareToIgnoreCase)
+                .collect(Collectors.toList());
+
+        cidades.forEach(c -> {
+            cmbCidades.addItem(c);
+            cmbCidades2.addItem(c);
+        });
+
+        AutoCompleteDecorator.decorate(cmbCidades);
+        AutoCompleteDecorator.decorate(cmbCidades2);
+
+        cmbCidades.setSelectedIndex(-1);
+        cmbCidades2.setSelectedIndex(-1);
     }
 
     // =================**Vendas**=================
@@ -162,6 +245,14 @@ public class Menu extends javax.swing.JFrame {
         btnDeleteVendas = new javax.swing.JButton();
         btnNewVendas = new javax.swing.JButton();
         btnUpdateVendas = new javax.swing.JButton();
+        cmbCliente = new javax.swing.JComboBox<>();
+        lblCliente = new javax.swing.JLabel();
+        lblLivro = new javax.swing.JLabel();
+        cmbLivros = new javax.swing.JComboBox<>();
+        btnFiltrarVendas = new javax.swing.JButton();
+        btnLimparVendas = new javax.swing.JButton();
+        lblCidade = new javax.swing.JLabel();
+        cmbCidades = new javax.swing.JComboBox<>();
         jPanel2 = new javax.swing.JPanel();
         jScrollPane2 = new javax.swing.JScrollPane();
         tblClientes = new javax.swing.JTable();
@@ -169,6 +260,12 @@ public class Menu extends javax.swing.JFrame {
         btnDeleteClientes = new javax.swing.JButton();
         btnNewClientes = new javax.swing.JButton();
         btnUpdateClientes = new javax.swing.JButton();
+        lblCliente2 = new javax.swing.JLabel();
+        lblCidade2 = new javax.swing.JLabel();
+        cmbClientes2 = new javax.swing.JComboBox<>();
+        cmbCidades2 = new javax.swing.JComboBox<>();
+        btnLimpar2 = new javax.swing.JButton();
+        btnFiltrar2 = new javax.swing.JButton();
         jPanel3 = new javax.swing.JPanel();
         jScrollPane3 = new javax.swing.JScrollPane();
         tblLivros = new javax.swing.JTable();
@@ -176,9 +273,16 @@ public class Menu extends javax.swing.JFrame {
         btnDeleteLivros = new javax.swing.JButton();
         btnNewLivros = new javax.swing.JButton();
         btnUpdateLivros = new javax.swing.JButton();
+        lblNomeLivro = new javax.swing.JLabel();
+        lblCodigo = new javax.swing.JLabel();
+        cmbNomeLivro = new javax.swing.JComboBox<>();
+        cmbCodigoLivro = new javax.swing.JComboBox<>();
+        btnLimpar3 = new javax.swing.JButton();
+        btnFiltrar3 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
+        tblVendas.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         tblVendas.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null, null},
@@ -207,10 +311,10 @@ public class Menu extends javax.swing.JFrame {
         });
         jScrollPane1.setViewportView(tblVendas);
 
-        lblVendas.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        lblVendas.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
         lblVendas.setText("Vendas");
 
-        btnDeleteVendas.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        btnDeleteVendas.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         btnDeleteVendas.setText("- Deletar");
         btnDeleteVendas.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -218,7 +322,7 @@ public class Menu extends javax.swing.JFrame {
             }
         });
 
-        btnNewVendas.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        btnNewVendas.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         btnNewVendas.setText("+ Nova Venda");
         btnNewVendas.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -226,11 +330,60 @@ public class Menu extends javax.swing.JFrame {
             }
         });
 
-        btnUpdateVendas.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        btnUpdateVendas.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         btnUpdateVendas.setText("Atualizar");
         btnUpdateVendas.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnUpdateVendasActionPerformed(evt);
+            }
+        });
+
+        cmbCliente.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        cmbCliente.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        cmbCliente.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cmbClienteActionPerformed(evt);
+            }
+        });
+
+        lblCliente.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        lblCliente.setText("Cliente:");
+
+        lblLivro.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        lblLivro.setText("Livro:");
+
+        cmbLivros.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        cmbLivros.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        cmbLivros.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cmbLivrosActionPerformed(evt);
+            }
+        });
+
+        btnFiltrarVendas.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        btnFiltrarVendas.setText("Filtrar");
+        btnFiltrarVendas.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnFiltrarVendasActionPerformed(evt);
+            }
+        });
+
+        btnLimparVendas.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        btnLimparVendas.setText("Limpar");
+        btnLimparVendas.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLimparVendasActionPerformed(evt);
+            }
+        });
+
+        lblCidade.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        lblCidade.setText("Cidade: ");
+
+        cmbCidades.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        cmbCidades.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        cmbCidades.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cmbCidadesActionPerformed(evt);
             }
         });
 
@@ -240,31 +393,60 @@ public class Menu extends javax.swing.JFrame {
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addGap(30, 30, 30)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(lblVendas)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 809, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addComponent(btnNewVendas)
                         .addGap(18, 18, 18)
                         .addComponent(btnUpdateVendas)
                         .addGap(18, 18, 18)
                         .addComponent(btnDeleteVendas))
-                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addComponent(lblVendas)
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 689, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(37, Short.MAX_VALUE))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(lblCliente)
+                            .addComponent(lblLivro))
+                        .addGap(18, 18, 18)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(cmbLivros, javax.swing.GroupLayout.PREFERRED_SIZE, 528, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(18, 18, 18)
+                                .addComponent(btnLimparVendas)
+                                .addGap(18, 18, 18)
+                                .addComponent(btnFiltrarVendas, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(cmbCliente, javax.swing.GroupLayout.PREFERRED_SIZE, 300, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(18, 18, 18)
+                                .addComponent(lblCidade)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(cmbCidades, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))))
+                .addContainerGap(36, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addGap(28, 28, 28)
                 .addComponent(lblVendas)
+                .addGap(26, 26, 26)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(cmbCliente, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(lblCliente)
+                    .addComponent(lblCidade)
+                    .addComponent(cmbCidades, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblLivro)
+                    .addComponent(cmbLivros, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnLimparVendas)
+                    .addComponent(btnFiltrarVendas))
                 .addGap(18, 18, 18)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 293, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(45, 45, 45)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 56, Short.MAX_VALUE)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(btnDeleteVendas, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnNewVendas, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnUpdateVendas, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(56, Short.MAX_VALUE))
+                    .addComponent(btnUpdateVendas, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnDeleteVendas, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(33, 33, 33))
         );
 
         jTabbedPane2.addTab("Vendas", jPanel1);
@@ -297,10 +479,10 @@ public class Menu extends javax.swing.JFrame {
         });
         jScrollPane2.setViewportView(tblClientes);
 
-        lblClientes.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        lblClientes.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
         lblClientes.setText("Clientes");
 
-        btnDeleteClientes.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        btnDeleteClientes.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         btnDeleteClientes.setText("- Deletar");
         btnDeleteClientes.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -308,7 +490,7 @@ public class Menu extends javax.swing.JFrame {
             }
         });
 
-        btnNewClientes.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        btnNewClientes.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         btnNewClientes.setText("+ Novo Cliente");
         btnNewClientes.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -316,11 +498,44 @@ public class Menu extends javax.swing.JFrame {
             }
         });
 
-        btnUpdateClientes.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        btnUpdateClientes.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         btnUpdateClientes.setText("Atualizar");
         btnUpdateClientes.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnUpdateClientesActionPerformed(evt);
+            }
+        });
+
+        lblCliente2.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        lblCliente2.setText("Cliente:");
+
+        lblCidade2.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        lblCidade2.setText("Cidade:");
+
+        cmbClientes2.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        cmbClientes2.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+
+        cmbCidades2.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        cmbCidades2.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        cmbCidades2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cmbCidades2ActionPerformed(evt);
+            }
+        });
+
+        btnLimpar2.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        btnLimpar2.setText("Limpar");
+        btnLimpar2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLimpar2ActionPerformed(evt);
+            }
+        });
+
+        btnFiltrar2.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        btnFiltrar2.setText("Filtrar");
+        btnFiltrar2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnFiltrar2ActionPerformed(evt);
             }
         });
 
@@ -330,31 +545,53 @@ public class Menu extends javax.swing.JFrame {
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addGap(30, 30, 30)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(lblClientes)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 802, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel2Layout.createSequentialGroup()
                         .addComponent(btnNewClientes)
                         .addGap(18, 18, 18)
                         .addComponent(btnUpdateClientes)
                         .addGap(18, 18, 18)
                         .addComponent(btnDeleteClientes))
-                    .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addComponent(lblClientes)
-                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 689, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(37, Short.MAX_VALUE))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                            .addComponent(lblCliente2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(lblCidade2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGap(18, 18, 18)
+                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addGroup(jPanel2Layout.createSequentialGroup()
+                                .addComponent(cmbCidades2, javax.swing.GroupLayout.PREFERRED_SIZE, 537, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(btnLimpar2)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(btnFiltrar2, javax.swing.GroupLayout.PREFERRED_SIZE, 80, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(cmbClientes2, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                .addGap(43, 43, Short.MAX_VALUE))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addGap(28, 28, 28)
                 .addComponent(lblClientes)
+                .addGap(29, 29, 29)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblCliente2)
+                    .addComponent(cmbClientes2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 17, Short.MAX_VALUE)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(cmbCidades2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(lblCidade2)
+                    .addComponent(btnLimpar2)
+                    .addComponent(btnFiltrar2))
                 .addGap(18, 18, 18)
                 .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 293, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(45, 45, 45)
+                .addGap(57, 57, 57)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(btnDeleteClientes, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnNewClientes, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnUpdateClientes, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(56, Short.MAX_VALUE))
+                    .addComponent(btnUpdateClientes, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnDeleteClientes, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(30, 30, 30))
         );
 
         jTabbedPane2.addTab("Clientes", jPanel2);
@@ -387,10 +624,10 @@ public class Menu extends javax.swing.JFrame {
         });
         jScrollPane3.setViewportView(tblLivros);
 
-        lblLivros.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        lblLivros.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
         lblLivros.setText("Livros");
 
-        btnDeleteLivros.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        btnDeleteLivros.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         btnDeleteLivros.setText("- Deletar");
         btnDeleteLivros.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -398,7 +635,7 @@ public class Menu extends javax.swing.JFrame {
             }
         });
 
-        btnNewLivros.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        btnNewLivros.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         btnNewLivros.setText("+ Novo Livro");
         btnNewLivros.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -406,11 +643,39 @@ public class Menu extends javax.swing.JFrame {
             }
         });
 
-        btnUpdateLivros.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        btnUpdateLivros.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         btnUpdateLivros.setText("Atualizar");
         btnUpdateLivros.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnUpdateLivrosActionPerformed(evt);
+            }
+        });
+
+        lblNomeLivro.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        lblNomeLivro.setText("Livro: ");
+
+        lblCodigo.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        lblCodigo.setText("Código:");
+
+        cmbNomeLivro.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        cmbNomeLivro.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+
+        cmbCodigoLivro.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        cmbCodigoLivro.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+
+        btnLimpar3.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        btnLimpar3.setText("Limpar");
+        btnLimpar3.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLimpar3ActionPerformed(evt);
+            }
+        });
+
+        btnFiltrar3.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        btnFiltrar3.setText("Filtrar");
+        btnFiltrar3.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnFiltrar3ActionPerformed(evt);
             }
         });
 
@@ -420,31 +685,53 @@ public class Menu extends javax.swing.JFrame {
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
                 .addGap(30, 30, 30)
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(lblLivros)
                     .addGroup(jPanel3Layout.createSequentialGroup()
                         .addComponent(btnNewLivros)
                         .addGap(18, 18, 18)
                         .addComponent(btnUpdateLivros)
                         .addGap(18, 18, 18)
                         .addComponent(btnDeleteLivros))
-                    .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addComponent(lblLivros)
-                        .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 689, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(37, Short.MAX_VALUE))
+                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 809, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(lblNomeLivro)
+                            .addComponent(lblCodigo))
+                        .addGap(18, 18, 18)
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel3Layout.createSequentialGroup()
+                                .addComponent(cmbCodigoLivro, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addGap(18, 18, 18)
+                                .addComponent(btnLimpar3, javax.swing.GroupLayout.PREFERRED_SIZE, 92, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(18, 18, 18)
+                                .addComponent(btnFiltrar3, javax.swing.GroupLayout.PREFERRED_SIZE, 82, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(cmbNomeLivro, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                .addContainerGap(36, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
-                .addGap(28, 28, 28)
+                .addGap(29, 29, 29)
                 .addComponent(lblLivros)
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 293, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(45, 45, 45)
+                .addGap(26, 26, 26)
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(btnDeleteLivros, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(lblNomeLivro)
+                    .addComponent(cmbNomeLivro, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblCodigo)
+                    .addComponent(cmbCodigoLivro, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnFiltrar3)
+                    .addComponent(btnLimpar3))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 11, Short.MAX_VALUE)
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 293, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(57, 57, 57)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnNewLivros, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnUpdateLivros, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(56, Short.MAX_VALUE))
+                    .addComponent(btnUpdateLivros, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnDeleteLivros, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(44, 44, 44))
         );
 
         jTabbedPane2.addTab("Livros", jPanel3);
@@ -453,16 +740,12 @@ public class Menu extends javax.swing.JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jTabbedPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 756, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addComponent(jTabbedPane2, javax.swing.GroupLayout.Alignment.TRAILING)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jTabbedPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 535, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jTabbedPane2)
                 .addContainerGap())
         );
 
@@ -582,6 +865,172 @@ public class Menu extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_btnUpdateVendasActionPerformed
 
+    private void cmbClienteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmbClienteActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_cmbClienteActionPerformed
+
+    private void cmbLivrosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmbLivrosActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_cmbLivrosActionPerformed
+
+    private void btnFiltrarVendasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFiltrarVendasActionPerformed
+        String clienteSelecionado = (String) cmbCliente.getSelectedItem();
+        String livroSelecionado = (String) cmbLivros.getSelectedItem();
+        String cidadeSelecionada = (String) cmbCidades.getSelectedItem();
+
+        List<Venda> vendas = vendasDAO.getAllVendas();
+
+        // Filtro por cliente
+        if (clienteSelecionado != null && !clienteSelecionado.isBlank()) {
+            vendas = vendas.stream()
+                    .filter(v -> v.getCliente() != null
+                    && v.getCliente().getNome() != null
+                    && v.getCliente().getNome().equalsIgnoreCase(clienteSelecionado))
+                    .collect(Collectors.toList());
+        }
+
+        // Filtro por cidade
+        if (cidadeSelecionada != null && !cidadeSelecionada.isBlank()) {
+            vendas = vendas.stream()
+                    .filter(v -> v.getCliente() != null
+                    && v.getCliente().getCidade() != null
+                    && v.getCliente().getCidade().equalsIgnoreCase(cidadeSelecionada))
+                    .collect(Collectors.toList());
+        }
+
+        // Filtro por livro
+        if (livroSelecionado != null && !livroSelecionado.isBlank()) {
+            vendas = vendas.stream()
+                    .filter(v -> v.getLivros() != null
+                    && v.getLivros().stream()
+                            .anyMatch(l -> l.getNome() != null
+                            && l.getNome().equalsIgnoreCase(livroSelecionado)))
+                    .collect(Collectors.toList());
+        }
+
+        // Atualiza tabela
+        DefaultTableModel model = (DefaultTableModel) tblVendas.getModel();
+        model.setRowCount(0);
+
+        for (Venda venda : vendas) {
+            String nomeCliente = venda.getCliente() != null ? venda.getCliente().getNome() : "—";
+
+            Map<String, Integer> mapaQtd = venda.getLivros().stream()
+                    .collect(Collectors.toMap(
+                            Livro::getNome,
+                            Livro::getQuantidade,
+                            Integer::sum
+                    ));
+
+            String nomesLivrosFormatados = mapaQtd.entrySet().stream()
+                    .map(e -> e.getValue() > 1
+                    ? e.getKey() + " (x" + e.getValue() + ")"
+                    : e.getKey())
+                    .collect(Collectors.joining(", "));
+
+            model.addRow(new Object[]{
+                venda.getId(),
+                nomeCliente,
+                nomesLivrosFormatados,
+                String.format("R$ %.2f", venda.getTotal())
+            });
+        }
+    }//GEN-LAST:event_btnFiltrarVendasActionPerformed
+
+    private void btnLimparVendasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimparVendasActionPerformed
+        cmbCliente.setSelectedIndex(-1);
+        cmbLivros.setSelectedIndex(-1);
+        cmbCidades.setSelectedIndex(-1);
+        carregarVendasNaTabela();
+    }//GEN-LAST:event_btnLimparVendasActionPerformed
+
+    private void cmbCidadesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmbCidadesActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_cmbCidadesActionPerformed
+
+    private void cmbCidades2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmbCidades2ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_cmbCidades2ActionPerformed
+
+    private void btnLimpar2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimpar2ActionPerformed
+        cmbClientes2.setSelectedIndex(-1);
+        cmbCidades2.setSelectedIndex(-1);
+        carregarClientesNaTabela();
+    }//GEN-LAST:event_btnLimpar2ActionPerformed
+
+    private void btnFiltrar2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFiltrar2ActionPerformed
+        String nomeSelecionado = (String) cmbClientes2.getSelectedItem();
+        String cidadeSelecionada = (String) cmbCidades2.getSelectedItem();
+
+        List<Cliente> clientes = clientesDAO.getAllClientes();
+
+        // aplica filtros cumulativos
+        if (nomeSelecionado != null && !nomeSelecionado.isBlank()) {
+            clientes = clientes.stream()
+                    .filter(c -> c.getNome() != null && c.getNome().equalsIgnoreCase(nomeSelecionado))
+                    .collect(Collectors.toList());
+        }
+
+        if (cidadeSelecionada != null && !cidadeSelecionada.isBlank()) {
+            clientes = clientes.stream()
+                    .filter(c -> c.getCidade() != null && c.getCidade().equalsIgnoreCase(cidadeSelecionada))
+                    .collect(Collectors.toList());
+        }
+
+        // atualiza tabela com os filtrados
+        DefaultTableModel model = (DefaultTableModel) tblClientes.getModel();
+        model.setRowCount(0);
+
+        for (Cliente c : clientes) {
+            model.addRow(new Object[]{
+                c.getId(),
+                c.getNome(),
+                c.getCidade(),
+                c.getContato()
+            });
+        }
+    }//GEN-LAST:event_btnFiltrar2ActionPerformed
+
+    private void btnFiltrar3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFiltrar3ActionPerformed
+        String nomeSelecionado = (String) cmbNomeLivro.getSelectedItem();
+        String codigoSelecionado = (String) cmbCodigoLivro.getSelectedItem();
+
+        List<Livro> livros = livrosDAO.getAllLivros();
+
+        // Filtro por nome
+        if (nomeSelecionado != null && !nomeSelecionado.isBlank()) {
+            livros = livros.stream()
+                    .filter(l -> l.getNome() != null && l.getNome().equalsIgnoreCase(nomeSelecionado))
+                    .collect(Collectors.toList());
+        }
+
+        // Filtro por código
+        if (codigoSelecionado != null && !codigoSelecionado.isBlank()) {
+            livros = livros.stream()
+                    .filter(l -> l.getCodigo() != null && l.getCodigo().equalsIgnoreCase(codigoSelecionado))
+                    .collect(Collectors.toList());
+        }
+
+        // Atualiza tabela com os filtrados
+        DefaultTableModel model = (DefaultTableModel) tblLivros.getModel();
+        model.setRowCount(0);
+
+        for (Livro l : livros) {
+            model.addRow(new Object[]{
+                l.getId(),
+                l.getCodigo(),
+                l.getNome(),
+                l.getValor()
+            });
+        }
+    }//GEN-LAST:event_btnFiltrar3ActionPerformed
+
+    private void btnLimpar3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimpar3ActionPerformed
+        cmbNomeLivro.setSelectedIndex(-1);
+        cmbCodigoLivro.setSelectedIndex(-1);
+        carregarLivrosNaTabela();
+    }//GEN-LAST:event_btnLimpar3ActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -611,12 +1060,25 @@ public class Menu extends javax.swing.JFrame {
     private javax.swing.JButton btnDeleteClientes;
     private javax.swing.JButton btnDeleteLivros;
     private javax.swing.JButton btnDeleteVendas;
+    private javax.swing.JButton btnFiltrar2;
+    private javax.swing.JButton btnFiltrar3;
+    private javax.swing.JButton btnFiltrarVendas;
+    private javax.swing.JButton btnLimpar2;
+    private javax.swing.JButton btnLimpar3;
+    private javax.swing.JButton btnLimparVendas;
     private javax.swing.JButton btnNewClientes;
     private javax.swing.JButton btnNewLivros;
     private javax.swing.JButton btnNewVendas;
     private javax.swing.JButton btnUpdateClientes;
     private javax.swing.JButton btnUpdateLivros;
     private javax.swing.JButton btnUpdateVendas;
+    private javax.swing.JComboBox<String> cmbCidades;
+    private javax.swing.JComboBox<String> cmbCidades2;
+    private javax.swing.JComboBox<String> cmbCliente;
+    private javax.swing.JComboBox<String> cmbClientes2;
+    private javax.swing.JComboBox<String> cmbCodigoLivro;
+    private javax.swing.JComboBox<String> cmbLivros;
+    private javax.swing.JComboBox<String> cmbNomeLivro;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
@@ -624,8 +1086,15 @@ public class Menu extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JTabbedPane jTabbedPane2;
+    private javax.swing.JLabel lblCidade;
+    private javax.swing.JLabel lblCidade2;
+    private javax.swing.JLabel lblCliente;
+    private javax.swing.JLabel lblCliente2;
     private javax.swing.JLabel lblClientes;
+    private javax.swing.JLabel lblCodigo;
+    private javax.swing.JLabel lblLivro;
     private javax.swing.JLabel lblLivros;
+    private javax.swing.JLabel lblNomeLivro;
     private javax.swing.JLabel lblVendas;
     private javax.swing.JTable tblClientes;
     private javax.swing.JTable tblLivros;

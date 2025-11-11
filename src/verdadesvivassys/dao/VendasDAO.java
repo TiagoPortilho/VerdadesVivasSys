@@ -75,6 +75,7 @@ public class VendasDAO {
             v.total,
             c.id AS cliente_id, 
             c.Nome AS cliente_nome,
+            c.Cidade AS cliente_cidade,
 
             -- Texto para exibir
             GROUP_CONCAT(l.Nome || ' (x' || vl.quantidade || ')', ', ') AS livros,
@@ -103,6 +104,7 @@ public class VendasDAO {
                 Cliente cliente = new Cliente();
                 cliente.setId(rs.getInt("cliente_id"));
                 cliente.setNome(rs.getString("cliente_nome"));
+                cliente.setCidade(rs.getString("cliente_cidade")); // 🔥 ESSENCIAL
                 venda.setCliente(cliente);
 
                 // monta lista de livros
@@ -111,7 +113,6 @@ public class VendasDAO {
 
                 if (meta != null && !meta.isBlank()) {
                     for (String item : meta.split("\\|\\|")) {
-
                         String[] p = item.split("::", 3);
                         if (p.length == 3) {
                             Livro l = new Livro();

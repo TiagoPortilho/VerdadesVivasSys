@@ -24,15 +24,40 @@ public class ClienteForm extends javax.swing.JFrame {
     public ClienteForm(Cliente cliente) {
         initComponents();
         initCustom();
-        lblTitulo.setText("Editar Cliente");
-        txtNome.setText("");
-        txtContato.setText("");
-        txtAddCidade.setText("");
-        if (cmbCidades.getItemCount() > 0) {
-            cmbCidades.setSelectedIndex(0);
-        }
-        txtNome.requestFocus();
 
+        lblTitulo.setText("Editar Cliente");
+
+        // Preenche campos de texto
+        txtNome.setText(cliente.getNome());
+        txtContato.setText(cliente.getContato());
+
+        // Limpa campo de cidade manual
+        txtAddCidade.setText("");
+
+        // Garante que o combo tenha opções antes de tentar selecionar
+        if (cmbCidades.getItemCount() > 0) {
+            String cidadeCliente = cliente.getCidade();
+            if (cidadeCliente != null && !cidadeCliente.isBlank()) {
+                // Se a cidade do cliente existir no combo, seleciona
+                boolean found = false;
+                for (int i = 0; i < cmbCidades.getItemCount(); i++) {
+                    if (cidadeCliente.equalsIgnoreCase(cmbCidades.getItemAt(i))) {
+                        cmbCidades.setSelectedIndex(i);
+                        found = true;
+                        break;
+                    }
+                }
+                // Se não existir no combo, adiciona e seleciona
+                if (!found) {
+                    cmbCidades.addItem(cidadeCliente);
+                    cmbCidades.setSelectedItem(cidadeCliente);
+                }
+            } else {
+                cmbCidades.setSelectedIndex(-1); // Nenhuma cidade
+            }
+        }
+
+        txtNome.requestFocus();
     }
 
     private void initCustom() {
@@ -315,7 +340,7 @@ public class ClienteForm extends javax.swing.JFrame {
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                         .addComponent(btnAddCidade, javax.swing.GroupLayout.PREFERRED_SIZE, 122, javax.swing.GroupLayout.PREFERRED_SIZE))
                                     .addComponent(cmbCidades, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGap(69, 76, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
