@@ -11,9 +11,9 @@ public class ClientesDAO {
 
     private final DatabaseConnection db = new DatabaseConnection();
 
-    // Cria a tabela automaticamente se não existir
+    // Cria as tabelas automaticamente se não existirem
     public ClientesDAO() {
-        String sql = """
+        String createCliente = """
             CREATE TABLE IF NOT EXISTS Cliente (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Nome TEXT NOT NULL,
@@ -21,10 +21,19 @@ public class ClientesDAO {
                 Contato TEXT NOT NULL
             );
         """;
+
+        String createCidade = """
+            CREATE TABLE IF NOT EXISTS Cidade (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT NOT NULL UNIQUE
+            );
+        """;
+
         try {
-            db.executeUpdate(sql);
+            db.executeUpdate(createCliente);
+            db.executeUpdate(createCidade);
         } catch (Exception e) {
-            System.out.println("Erro ao criar tabela Cliente: " + e.getMessage());
+            System.out.println("Erro ao criar tabelas: " + e.getMessage());
         }
     }
 
@@ -32,8 +41,7 @@ public class ClientesDAO {
     public boolean insertCliente(Cliente cliente) {
         String sql = "INSERT INTO Cliente (Nome, Cidade, Contato) VALUES (?, ?, ?)";
 
-        try (var conn = DatabaseConnection.connect();
-             var stmt = conn.prepareStatement(sql)) {
+        try (var conn = DatabaseConnection.connect(); var stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, cliente.getNome());
             stmt.setString(2, cliente.getCidade());
@@ -52,8 +60,7 @@ public class ClientesDAO {
     public boolean updateCliente(Cliente cliente) {
         String sql = "UPDATE Cliente SET Nome = ?, Cidade = ?, Contato = ? WHERE id = ?";
 
-        try (var conn = DatabaseConnection.connect();
-             var stmt = conn.prepareStatement(sql)) {
+        try (var conn = DatabaseConnection.connect(); var stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, cliente.getNome());
             stmt.setString(2, cliente.getCidade());
@@ -73,8 +80,7 @@ public class ClientesDAO {
     public boolean deleteCliente(int id) {
         String sql = "DELETE FROM Cliente WHERE id = ?";
 
-        try (var conn = DatabaseConnection.connect();
-             var stmt = conn.prepareStatement(sql)) {
+        try (var conn = DatabaseConnection.connect(); var stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, id);
             stmt.executeUpdate();
@@ -91,9 +97,7 @@ public class ClientesDAO {
         List<Cliente> clientes = new ArrayList<>();
         String sql = "SELECT * FROM Cliente ORDER BY Nome";
 
-        try (var conn = DatabaseConnection.connect();
-             var stmt = conn.createStatement();
-             var rs = stmt.executeQuery(sql)) {
+        try (var conn = DatabaseConnection.connect(); var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
                 clientes.add(new Cliente(
@@ -115,8 +119,7 @@ public class ClientesDAO {
     public Cliente getClienteById(int id) {
         String sql = "SELECT * FROM Cliente WHERE id = ?";
 
-        try (var conn = DatabaseConnection.connect();
-             var stmt = conn.prepareStatement(sql)) {
+        try (var conn = DatabaseConnection.connect(); var stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, id);
             var rs = stmt.executeQuery();
@@ -142,8 +145,7 @@ public class ClientesDAO {
         List<Cliente> clientes = new ArrayList<>();
         String sql = "SELECT * FROM Cliente WHERE Nome LIKE ?";
 
-        try (var conn = DatabaseConnection.connect();
-             var stmt = conn.prepareStatement(sql)) {
+        try (var conn = DatabaseConnection.connect(); var stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, "%" + nome + "%");
             var rs = stmt.executeQuery();
@@ -169,8 +171,7 @@ public class ClientesDAO {
         List<Cliente> clientes = new ArrayList<>();
         String sql = "SELECT * FROM Cliente WHERE Cidade LIKE ?";
 
-        try (var conn = DatabaseConnection.connect();
-             var stmt = conn.prepareStatement(sql)) {
+        try (var conn = DatabaseConnection.connect(); var stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, "%" + cidade + "%");
             var rs = stmt.executeQuery();
@@ -189,5 +190,42 @@ public class ClientesDAO {
         }
 
         return clientes;
+    }
+
+    // ===============================
+    // 📍 CIDADE - Funções simples
+    // ===============================
+    // Inserir nova cidade
+    public boolean insertCidade(String nome) {
+        String sql = "INSERT OR IGNORE INTO Cidade (nome) VALUES (?)";
+
+        try (var conn = DatabaseConnection.connect(); var stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, nome.trim());
+            stmt.executeUpdate();
+            return true;
+
+        } catch (SQLException e) {
+            System.out.println("Erro ao inserir cidade: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // Buscar todas as cidades
+    public List<String> getAllCidades() {
+        List<String> cidades = new ArrayList<>();
+        String sql = "SELECT nome FROM Cidade ORDER BY nome COLLATE NOCASE";
+
+        try (var conn = DatabaseConnection.connect(); var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                cidades.add(rs.getString("nome"));
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Erro ao buscar cidades: " + e.getMessage());
+        }
+
+        return cidades;
     }
 }

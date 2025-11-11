@@ -3,11 +3,17 @@ package verdadesvivassys.connection;
 import java.sql.*;
 
 public class DatabaseConfig {
+
     private static final String URL = "jdbc:sqlite:verdadesvivas.db";
 
     public static void initialize() {
-        try (Connection conn = DriverManager.getConnection(URL);
-             Statement stmt = conn.createStatement()) {
+        createTables();
+        insertDefaultData();
+    }
+
+    // 🧱 Criação de tabelas
+    private static void createTables() {
+        try (Connection conn = DriverManager.getConnection(URL); Statement stmt = conn.createStatement()) {
 
             // 🧱 Cria tabela Cliente
             String createClienteTable = """
@@ -55,9 +61,26 @@ public class DatabaseConfig {
             """;
             stmt.execute(createVendaLivroTable);
 
+            // 🏙️ Tabela Cidade
+            String createCidadeTable = """
+            CREATE TABLE IF NOT EXISTS Cidade (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT NOT NULL
+                );
+            """;
+            stmt.execute(createCidadeTable);
+
             System.out.println("✅ Tabelas criadas/atualizadas com sucesso.");
 
-            // 📦 Verifica se os livros já existem
+        } catch (SQLException e) {
+            System.out.println("❌ Erro ao criar tabelas: " + e.getMessage());
+        }
+    }
+
+    // 📦 Inserção inicial de livros
+    private static void insertDefaultData() {
+        try (Connection conn = DriverManager.getConnection(URL); Statement stmt = conn.createStatement()) {
+
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) AS total FROM Livro;");
             int total = rs.getInt("total");
 
@@ -184,7 +207,7 @@ public class DatabaseConfig {
             }
 
         } catch (SQLException e) {
-            System.out.println("❌ Erro ao inicializar o banco de dados: " + e.getMessage());
+            System.out.println("❌ Erro ao inserir dados iniciais: " + e.getMessage());
         }
     }
 
