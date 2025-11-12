@@ -1,5 +1,8 @@
 package verdadesvivassys.views;
 
+import verdadesvivassys.views.venda.VendaForm;
+import verdadesvivassys.views.livro.LivroForm;
+import verdadesvivassys.views.cliente.ClienteForm;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -14,6 +17,9 @@ import verdadesvivassys.dao.VendasDAO;
 import verdadesvivassys.model.Cliente;
 import verdadesvivassys.model.Livro;
 import verdadesvivassys.model.Venda;
+import verdadesvivassys.views.cliente.ClienteDetail;
+import verdadesvivassys.views.livro.LivroDetail;
+import verdadesvivassys.views.venda.VendaDetail;
 
 public class Menu extends javax.swing.JFrame {
 
@@ -26,6 +32,7 @@ public class Menu extends javax.swing.JFrame {
     public Menu() {
         new DatabaseConfig().initialize();
         initComponents();
+        setResizable(false);
 
         carregarLivrosNaTabela();
         carregarClientesNaTabela();
@@ -253,6 +260,7 @@ public class Menu extends javax.swing.JFrame {
         btnLimparVendas = new javax.swing.JButton();
         lblCidade = new javax.swing.JLabel();
         cmbCidades = new javax.swing.JComboBox<>();
+        btnDetalhesVenda = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
         jScrollPane2 = new javax.swing.JScrollPane();
         tblClientes = new javax.swing.JTable();
@@ -266,6 +274,7 @@ public class Menu extends javax.swing.JFrame {
         cmbCidades2 = new javax.swing.JComboBox<>();
         btnLimpar2 = new javax.swing.JButton();
         btnFiltrar2 = new javax.swing.JButton();
+        btnDetalhesCliente = new javax.swing.JButton();
         jPanel3 = new javax.swing.JPanel();
         jScrollPane3 = new javax.swing.JScrollPane();
         tblLivros = new javax.swing.JTable();
@@ -279,8 +288,10 @@ public class Menu extends javax.swing.JFrame {
         cmbCodigoLivro = new javax.swing.JComboBox<>();
         btnLimpar3 = new javax.swing.JButton();
         btnFiltrar3 = new javax.swing.JButton();
+        btnDetalhesLivros = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("VerdadesVivasSys");
 
         tblVendas.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         tblVendas.setModel(new javax.swing.table.DefaultTableModel(
@@ -387,6 +398,14 @@ public class Menu extends javax.swing.JFrame {
             }
         });
 
+        btnDetalhesVenda.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        btnDetalhesVenda.setText("Detalhes");
+        btnDetalhesVenda.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnDetalhesVendaActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -401,7 +420,9 @@ public class Menu extends javax.swing.JFrame {
                         .addGap(18, 18, 18)
                         .addComponent(btnUpdateVendas)
                         .addGap(18, 18, 18)
-                        .addComponent(btnDeleteVendas))
+                        .addComponent(btnDeleteVendas)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(btnDetalhesVenda))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(lblCliente)
@@ -445,7 +466,8 @@ public class Menu extends javax.swing.JFrame {
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnNewVendas, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnUpdateVendas, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnDeleteVendas, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(btnDeleteVendas, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnDetalhesVenda, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(33, 33, 33))
         );
 
@@ -453,20 +475,20 @@ public class Menu extends javax.swing.JFrame {
 
         tblClientes.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null},
-                {null, null, null},
-                {null, null, null},
-                {null, null, null}
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
             },
             new String [] {
-                "Id", "Nome", "Cidade"
+                "Id", "Nome", "Cidade", "Contato"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.Integer.class, java.lang.String.class, java.lang.String.class
+                java.lang.Integer.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
             };
             boolean[] canEdit = new boolean [] {
-                false, false, false
+                false, false, false, false
             };
 
             public Class getColumnClass(int columnIndex) {
@@ -539,6 +561,14 @@ public class Menu extends javax.swing.JFrame {
             }
         });
 
+        btnDetalhesCliente.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        btnDetalhesCliente.setText("Detalhes");
+        btnDetalhesCliente.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnDetalhesClienteActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
@@ -547,13 +577,6 @@ public class Menu extends javax.swing.JFrame {
                 .addGap(30, 30, 30)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(lblClientes)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 802, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(btnNewClientes)
-                        .addGap(18, 18, 18)
-                        .addComponent(btnUpdateClientes)
-                        .addGap(18, 18, 18)
-                        .addComponent(btnDeleteClientes))
                     .addGroup(jPanel2Layout.createSequentialGroup()
                         .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                             .addComponent(lblCliente2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -566,7 +589,17 @@ public class Menu extends javax.swing.JFrame {
                                 .addComponent(btnLimpar2)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addComponent(btnFiltrar2, javax.swing.GroupLayout.PREFERRED_SIZE, 80, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(cmbClientes2, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                            .addComponent(cmbClientes2, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                    .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel2Layout.createSequentialGroup()
+                            .addComponent(btnNewClientes)
+                            .addGap(18, 18, 18)
+                            .addComponent(btnUpdateClientes)
+                            .addGap(18, 18, 18)
+                            .addComponent(btnDeleteClientes)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(btnDetalhesCliente))
+                        .addComponent(jScrollPane2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 802, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addGap(43, 43, Short.MAX_VALUE))
         );
         jPanel2Layout.setVerticalGroup(
@@ -590,7 +623,8 @@ public class Menu extends javax.swing.JFrame {
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnNewClientes, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnUpdateClientes, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnDeleteClientes, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(btnDeleteClientes, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnDetalhesCliente, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(30, 30, 30))
         );
 
@@ -679,6 +713,14 @@ public class Menu extends javax.swing.JFrame {
             }
         });
 
+        btnDetalhesLivros.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        btnDetalhesLivros.setText("Detalhes");
+        btnDetalhesLivros.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnDetalhesLivrosActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
@@ -692,7 +734,9 @@ public class Menu extends javax.swing.JFrame {
                         .addGap(18, 18, 18)
                         .addComponent(btnUpdateLivros)
                         .addGap(18, 18, 18)
-                        .addComponent(btnDeleteLivros))
+                        .addComponent(btnDeleteLivros)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(btnDetalhesLivros))
                     .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 809, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel3Layout.createSequentialGroup()
                         .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -730,7 +774,8 @@ public class Menu extends javax.swing.JFrame {
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnNewLivros, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnUpdateLivros, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnDeleteLivros, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(btnDeleteLivros, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnDetalhesLivros, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(44, 44, 44))
         );
 
@@ -740,7 +785,7 @@ public class Menu extends javax.swing.JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jTabbedPane2, javax.swing.GroupLayout.Alignment.TRAILING)
+            .addComponent(jTabbedPane2)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1031,6 +1076,42 @@ public class Menu extends javax.swing.JFrame {
         carregarLivrosNaTabela();
     }//GEN-LAST:event_btnLimpar3ActionPerformed
 
+    private void btnDetalhesLivrosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDetalhesLivrosActionPerformed
+        int idlivro = getIdLivroSelecionado();
+        if (idlivro >= 0) {
+            new LivroDetail(livrosDAO.getLivroById(idlivro)).setVisible(true);
+        } else {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Selecione um livro na tabela",
+                    "Erro de identificação",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+        }
+    }//GEN-LAST:event_btnDetalhesLivrosActionPerformed
+
+    private void btnDetalhesClienteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDetalhesClienteActionPerformed
+        int idcliente = getIdClienteSelecionado();
+        if (idcliente >= 0) {
+            new ClienteDetail(clientesDAO.getClienteById(idcliente)).setVisible(true);
+        } else {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Selecione um cliente na tabela",
+                    "Erro de identificação",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+        }
+    }//GEN-LAST:event_btnDetalhesClienteActionPerformed
+
+    private void btnDetalhesVendaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDetalhesVendaActionPerformed
+        int idvenda = getIdVendaSelecionada();
+        if (idvenda >= 0) {
+            new VendaDetail(vendasDAO.getVendaById(idvenda)).setVisible(true);
+        } else {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Selecione uma venda na tabela",
+                    "Erro de identificação",
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
+        }
+    }//GEN-LAST:event_btnDetalhesVendaActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -1060,6 +1141,9 @@ public class Menu extends javax.swing.JFrame {
     private javax.swing.JButton btnDeleteClientes;
     private javax.swing.JButton btnDeleteLivros;
     private javax.swing.JButton btnDeleteVendas;
+    private javax.swing.JButton btnDetalhesCliente;
+    private javax.swing.JButton btnDetalhesLivros;
+    private javax.swing.JButton btnDetalhesVenda;
     private javax.swing.JButton btnFiltrar2;
     private javax.swing.JButton btnFiltrar3;
     private javax.swing.JButton btnFiltrarVendas;

@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-package verdadesvivassys.views;
+package verdadesvivassys.views.cliente;
 
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import verdadesvivassys.model.Cliente;
@@ -19,11 +19,13 @@ public class ClienteForm extends javax.swing.JFrame {
     public ClienteForm() {
         initComponents();
         initCustom();
+        setResizable(false);
     }
 
     public ClienteForm(Cliente cliente) {
         initComponents();
         initCustom();
+        setResizable(false);
 
         lblTitulo.setText("Editar Cliente");
 

@@ -1,5 +1,6 @@
-package verdadesvivassys.views;
+package verdadesvivassys.views.venda;
 
+import verdadesvivassys.views.cliente.ClienteForm;
 import java.lang.System.Logger.Level;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
@@ -23,6 +24,7 @@ public class VendaForm extends javax.swing.JFrame {
         initComponents();
         loadClientes();
         loadLivros();
+        setResizable(false);
 
         clearFields();
         AutoCompleteDecorator.decorate(cmbCliente);
@@ -46,6 +48,7 @@ public class VendaForm extends javax.swing.JFrame {
         initComponents();
         loadClientes();
         loadLivros();
+        setResizable(false);
         
         this.editid = venda.getId();
 

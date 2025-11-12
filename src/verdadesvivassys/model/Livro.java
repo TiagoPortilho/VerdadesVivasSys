@@ -6,7 +6,7 @@ public class Livro {
     private String codigo;
     private String nome;
     private float valor;
-    private int quantidade = 1; // ✅ novo campo
+    private int quantidade = 1;
 
     public Livro(){}
 

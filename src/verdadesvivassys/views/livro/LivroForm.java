@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-package verdadesvivassys.views;
+package verdadesvivassys.views.livro;
 
 import verdadesvivassys.model.Livro;
 
@@ -17,10 +17,12 @@ public class LivroForm extends javax.swing.JFrame {
 
     public LivroForm() {
         initComponents();
+        setResizable(false);
     }
 
     public LivroForm(Livro livro) {
         initComponents();
+        setResizable(false);
         lblTitulo.setText("Editar Livro");
         txtNome.setText(livro.getNome());
         txtCodigo.setText(livro.getCodigo());
