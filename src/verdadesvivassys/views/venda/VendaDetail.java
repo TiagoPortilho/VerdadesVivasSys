@@ -17,6 +17,7 @@ public class VendaDetail extends javax.swing.JFrame {
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(VendaDetail.class.getName());
     private Venda venda;
+
     /**
      * Creates new form VendaDetail
      */
@@ -40,22 +41,103 @@ public class VendaDetail extends javax.swing.JFrame {
         lblCliente.setText(venda.getCliente() != null ? venda.getCliente().getNome() : "—");
 
         DefaultTableModel model = (DefaultTableModel) tblLivros.getModel();
-        model.setRowCount(0); // limpa
+        model.setRowCount(0); // limpa tabela
 
         List<Livro> livros = venda.getLivros();
         if (livros != null) {
+            float total = 0f;
+
             for (Livro l : livros) {
+                float precoComDesconto = calcularPrecoComDesconto(l, l.getQuantidade());
+                float subtotal = precoComDesconto * l.getQuantidade();
+                total += subtotal;
+
                 model.addRow(new Object[]{
                     l.getId(),
                     l.getCodigo(),
                     l.getNome(),
-                    String.format("R$ %.2f", l.getValor()),
+                    String.format("R$ %.2f", precoComDesconto),
                     l.getQuantidade()
                 });
             }
+
+            lblTotal.setText(String.format("R$ %.2f", total));
+        } else {
+            lblTotal.setText("R$ 0,00");
+        }
+    }
+
+    private float calcularPrecoComDesconto(Livro livro, int quantidade) {
+        if (livro == null || livro.getCodigo() == null) {
+            return livro.getValor();
         }
 
-        lblTotal.setText(String.format("R$ %.2f", venda.getTotal()));
+        float preco = livro.getValor();
+        String cod = livro.getCodigo().trim().toUpperCase();
+
+        switch (cod) {
+            case "CBO":
+                if (quantidade >= 80) {
+                    preco = 5.25f;
+                } else if (quantidade >= 48) {
+                    preco = 6.30f;
+                } else if (quantidade >= 24) {
+                    preco = 7.35f;
+                } else if (quantidade >= 12) {
+                    preco = 8.40f;
+                } else if (quantidade >= 4) {
+                    preco = 9.45f;
+                } else {
+                    preco = 10.50f;
+                }
+                break;
+
+            case "CPA":
+                if (quantidade >= 300) {
+                    preco = 4.20f;
+                } else if (quantidade >= 100) {
+                    preco = 4.90f;
+                } else if (quantidade >= 30) {
+                    preco = 5.60f;
+                } else if (quantidade >= 10) {
+                    preco = 6.30f;
+                } else {
+                    preco = 7.00f;
+                }
+                break;
+
+            case "MPG":
+                if (quantidade >= 80) {
+                    preco = 3.37f;
+                } else if (quantidade >= 48) {
+                    preco = 4.05f;
+                } else if (quantidade >= 24) {
+                    preco = 4.73f;
+                } else if (quantidade >= 12) {
+                    preco = 5.40f;
+                } else if (quantidade >= 4) {
+                    preco = 6.08f;
+                } else {
+                    preco = 6.75f;
+                }
+                break;
+
+            case "CP4":
+                if (quantidade >= 300) {
+                    preco = 1.56f;
+                } else if (quantidade >= 100) {
+                    preco = 1.82f;
+                } else if (quantidade >= 30) {
+                    preco = 2.08f;
+                } else if (quantidade >= 10) {
+                    preco = 2.34f;
+                } else {
+                    preco = 2.60f;
+                }
+                break;
+        }
+
+        return preco;
     }
 
     /**
@@ -78,7 +160,7 @@ public class VendaDetail extends javax.swing.JFrame {
         lblTotal = new javax.swing.JLabel();
         btnFechar = new javax.swing.JButton();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
 
         jLabel1.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         jLabel1.setText("Detalhes Venda");

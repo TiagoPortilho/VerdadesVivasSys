@@ -49,7 +49,7 @@ public class VendaForm extends javax.swing.JFrame {
         loadClientes();
         loadLivros();
         setResizable(false);
-        
+
         this.editid = venda.getId();
 
         AutoCompleteDecorator.decorate(cmbCliente);
@@ -61,21 +61,23 @@ public class VendaForm extends javax.swing.JFrame {
         // seleciona o cliente correspondente
         cmbCliente.setSelectedItem(venda.getCliente().getNome());
 
-        // limpa tabela e preenche com os livros da venda (agora incluindo quantidade)
+        // limpa tabela e preenche com os livros da venda (agora incluindo quantidade e aplicando desconto)
         DefaultTableModel model = (DefaultTableModel) tblLivros.getModel();
         model.setRowCount(0);
         for (Livro l : venda.getLivros()) {
+            // calcula o valor já com desconto
+            float valorComDesconto = calcularPrecoComDesconto(l, l.getQuantidade());
+
             model.addRow(new Object[]{
                 l.getId(),
-                l.getCodigo(), // pode ser null se não estiver carregado no DAO; opcional
+                l.getCodigo(),
                 l.getNome(),
-                l.getValor(), // pode ser 0 se não foi carregado pelo DAO
-                l.getQuantidade() // <<< aqui
+                valorComDesconto,
+                l.getQuantidade()
             });
         }
 
-        // atualiza o total
-        lblTotal.setText("Valor Total: R$ " + String.format("%.2f", venda.getTotal()));
+        updateTotal();
 
         // adiciona o mesmo listener de foco da janela
         this.addWindowFocusListener(new java.awt.event.WindowFocusListener() {
@@ -109,36 +111,32 @@ public class VendaForm extends javax.swing.JFrame {
     private void updateTotal() {
         DefaultTableModel model = (DefaultTableModel) tblLivros.getModel();
         float total = 0f;
+        boolean descontoAplicado = false;
 
         for (int i = 0; i < model.getRowCount(); i++) {
             Object valorObj = model.getValueAt(i, 3);
             Object qtdObj = model.getValueAt(i, 4);
 
-            if (valorObj == null) {
+            if (valorObj == null || qtdObj == null) {
                 continue;
-            }
-            String valorStr = valorObj.toString().trim();
-            if (valorStr.isEmpty() || valorStr.equalsIgnoreCase("null")) {
-                continue;
-            }
-
-            int qtd = 1;
-            if (qtdObj != null) {
-                try {
-                    qtd = Integer.parseInt(qtdObj.toString());
-                    if (qtd < 0) {
-                        qtd = 1;
-                    }
-                } catch (NumberFormatException ex) {
-                    qtd = 1;
-                }
             }
 
             try {
-                float valor = Float.parseFloat(valorStr);
-                total += valor * qtd;
+                int qtd = Integer.parseInt(qtdObj.toString());
+                int idLivro = Integer.parseInt(model.getValueAt(i, 0).toString());
+                Livro livro = livrosDAO.getLivroById(idLivro);
+
+                if (livro != null) {
+                    float valorDesconto = calcularPrecoComDesconto(livro, qtd);
+                    model.setValueAt(valorDesconto, i, 3);
+                    total += valorDesconto * qtd;
+
+                    if (valorDesconto < livro.getValor()) {
+                        descontoAplicado = true;
+                    }
+                }
             } catch (NumberFormatException e) {
-                System.out.println("Valor inválido na linha " + i + ": " + valorStr);
+                System.out.println("Valor inválido na linha " + i);
             }
         }
 
@@ -219,100 +217,99 @@ public class VendaForm extends javax.swing.JFrame {
     }
 
     private void addVenda() {
-    try {
-        // 1️⃣ Validar campos
-        if (!verifyFields()) {
-            return;
-        }
-
-        // 2️⃣ Pegar o cliente selecionado
-        String nomeCliente = cmbCliente.getSelectedItem().toString();
-        java.util.List<Cliente> clientes = clientesDAO.getByNome(nomeCliente);
-
-        if (clientes == null || clientes.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                "Cliente inválido. Atualize a lista e tente novamente.",
-                "Erro",
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        Cliente cliente = clientes.get(0);
-
-        // 3️⃣ Montar lista de livros com quantidade
-        DefaultTableModel model = (DefaultTableModel) tblLivros.getModel();
-        java.util.List<Livro> livros = new java.util.ArrayList<>();
-
-        for (int i = 0; i < model.getRowCount(); i++) {
-            int id = Integer.parseInt(model.getValueAt(i, 0).toString());
-            String nome = model.getValueAt(i, 2).toString();
-            float valor = Float.parseFloat(model.getValueAt(i, 3).toString());
-            int qtd = Integer.parseInt(model.getValueAt(i, 4).toString());
-
-            Livro l = new Livro();
-            l.setId(id);
-            l.setNome(nome);
-            l.setValor(valor);
-            l.setQuantidade(qtd);
-
-            livros.add(l);
-        }
-
-        // 4️⃣ Calcular total
-        float total = 0;
-        for (Livro l : livros) {
-            total += l.getValor() * l.getQuantidade();
-        }
-
-        // 5️⃣ Montar objeto Venda
-        Venda venda = new Venda();
-        venda.setCliente(cliente);
-        venda.setLivros(livros);
-        venda.setTotal(total);
-
-        boolean sucesso;
-
-        // 6️⃣ Verificar INSERÇÃO ou EDIÇÃO
-        if (editid == -1) {
-            // nova venda
-            sucesso = DAOFactory.getVendasDAO().addVenda(venda);
-        } else {
-            // edição
-            venda.setId(editid);
-            sucesso = DAOFactory.getVendasDAO().updateVenda(venda);
-        }
-
-        // 7️⃣ Feedback
-        if (sucesso) {
-            if (editid == -1) {
-                JOptionPane.showMessageDialog(this,
-                    "Venda cadastrada com sucesso!",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                JOptionPane.showMessageDialog(this,
-                    "Venda atualizada com sucesso!",
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+        try {
+            // 1️⃣ Validar campos
+            if (!verifyFields()) {
+                return;
             }
 
-            clearFields();
-            this.dispose();
+            // 2️⃣ Pegar o cliente selecionado
+            String nomeCliente = cmbCliente.getSelectedItem().toString();
+            java.util.List<Cliente> clientes = clientesDAO.getByNome(nomeCliente);
 
-        } else {
+            if (clientes == null || clientes.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                        "Cliente inválido. Atualize a lista e tente novamente.",
+                        "Erro",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            Cliente cliente = clientes.get(0);
+
+            // 3️⃣ Montar lista de livros com quantidade
+            DefaultTableModel model = (DefaultTableModel) tblLivros.getModel();
+            java.util.List<Livro> livros = new java.util.ArrayList<>();
+
+            for (int i = 0; i < model.getRowCount(); i++) {
+                int id = Integer.parseInt(model.getValueAt(i, 0).toString());
+                String nome = model.getValueAt(i, 2).toString();
+                float valor = Float.parseFloat(model.getValueAt(i, 3).toString());
+                int qtd = Integer.parseInt(model.getValueAt(i, 4).toString());
+
+                Livro l = new Livro();
+                l.setId(id);
+                l.setNome(nome);
+                l.setValor(valor);
+                l.setQuantidade(qtd);
+
+                livros.add(l);
+            }
+
+            // 4️⃣ Calcular total
+            float total = 0;
+            for (Livro l : livros) {
+                total += l.getValor() * l.getQuantidade();
+            }
+
+            // 5️⃣ Montar objeto Venda
+            Venda venda = new Venda();
+            venda.setCliente(cliente);
+            venda.setLivros(livros);
+            venda.setTotal(total);
+
+            boolean sucesso;
+
+            // 6️⃣ Verificar INSERÇÃO ou EDIÇÃO
+            if (editid == -1) {
+                // nova venda
+                sucesso = DAOFactory.getVendasDAO().addVenda(venda);
+            } else {
+                // edição
+                venda.setId(editid);
+                sucesso = DAOFactory.getVendasDAO().updateVenda(venda);
+            }
+
+            // 7️⃣ Feedback
+            if (sucesso) {
+                if (editid == -1) {
+                    JOptionPane.showMessageDialog(this,
+                            "Venda cadastrada com sucesso!",
+                            "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                            "Venda atualizada com sucesso!",
+                            "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                }
+
+                clearFields();
+                this.dispose();
+
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "Falha ao salvar a venda.",
+                        "Erro",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+
+        } catch (Exception e) {
+            logger.log(java.util.logging.Level.SEVERE, "Erro ao salvar venda", e);
             JOptionPane.showMessageDialog(this,
-                "Falha ao salvar a venda.",
-                "Erro",
-                JOptionPane.ERROR_MESSAGE);
+                    "Erro inesperado ao salvar a venda: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE);
         }
-
-    } catch (Exception e) {
-        logger.log(java.util.logging.Level.SEVERE, "Erro ao salvar venda", e);
-        JOptionPane.showMessageDialog(this,
-                "Erro inesperado ao salvar a venda: " + e.getMessage(),
-                "Erro",
-                JOptionPane.ERROR_MESSAGE);
     }
-}
-
 
     private void clearFields() {
         cmbCliente.setSelectedIndex(-1);
@@ -320,6 +317,79 @@ public class VendaForm extends javax.swing.JFrame {
         DefaultTableModel model = (DefaultTableModel) tblLivros.getModel();
         model.setRowCount(0);
         lblTotal.setText("Valor Total: R$ 0,00");
+    }
+
+    private float calcularPrecoComDesconto(Livro livro, int quantidade) {
+        if (livro == null || livro.getCodigo() == null) {
+            return livro.getValor();
+        }
+
+        float preco = livro.getValor();
+        String cod = livro.getCodigo().trim().toUpperCase();
+
+        switch (cod) {
+            case "CBO": // Calendário de Bolso (50 uni)
+                if (quantidade >= 80) {
+                    preco = 5.25f;
+                } else if (quantidade >= 48) {
+                    preco = 6.30f;
+                } else if (quantidade >= 24) {
+                    preco = 7.35f;
+                } else if (quantidade >= 12) {
+                    preco = 8.40f;
+                } else if (quantidade >= 4) {
+                    preco = 9.45f;
+                } else {
+                    preco = 10.50f;
+                }
+                break;
+
+            case "CPA": // Calendário de Parede - 12 pág.
+                if (quantidade >= 300) {
+                    preco = 4.20f;
+                } else if (quantidade >= 100) {
+                    preco = 4.90f;
+                } else if (quantidade >= 30) {
+                    preco = 5.60f;
+                } else if (quantidade >= 10) {
+                    preco = 6.30f;
+                } else {
+                    preco = 7.00f;
+                }
+                break;
+
+            case "MPG": // Marcadores de Página (25 uni)
+                if (quantidade >= 80) {
+                    preco = 3.37f;
+                } else if (quantidade >= 48) {
+                    preco = 4.05f;
+                } else if (quantidade >= 24) {
+                    preco = 4.73f;
+                } else if (quantidade >= 12) {
+                    preco = 5.40f;
+                } else if (quantidade >= 4) {
+                    preco = 6.08f;
+                } else {
+                    preco = 6.75f;
+                }
+                break;
+
+            case "CP4": // Calendário de Parede - 4 pág.
+                if (quantidade >= 300) {
+                    preco = 1.56f;
+                } else if (quantidade >= 100) {
+                    preco = 1.82f;
+                } else if (quantidade >= 30) {
+                    preco = 2.08f;
+                } else if (quantidade >= 10) {
+                    preco = 2.34f;
+                } else {
+                    preco = 2.60f;
+                }
+                break;
+        }
+
+        return preco;
     }
 
     @SuppressWarnings("unchecked")
@@ -482,7 +552,8 @@ public class VendaForm extends javax.swing.JFrame {
                                             .addComponent(btnAddLivro, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                         .addComponent(cmbCliente, javax.swing.GroupLayout.Alignment.LEADING, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                     .addGap(18, 18, 18)
-                                    .addComponent(btnAddCliente, javax.swing.GroupLayout.PREFERRED_SIZE, 165, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addComponent(btnAddCliente, javax.swing.GroupLayout.PREFERRED_SIZE, 165, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGap(6, 6, 6))
                                 .addComponent(cmbLivro, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))))
                 .addContainerGap(76, Short.MAX_VALUE))
         );
@@ -553,6 +624,7 @@ public class VendaForm extends javax.swing.JFrame {
 
             String sel = cmbLivro.getSelectedItem().toString();
             Livro livro = livrosDAO.getByNome(sel);
+
             if (livro == null) {
                 JOptionPane.showMessageDialog(this,
                         "Livro não encontrado!",
@@ -580,28 +652,37 @@ public class VendaForm extends javax.swing.JFrame {
             }
 
             DefaultTableModel model = (DefaultTableModel) tblLivros.getModel();
-
             boolean found = false;
+
             for (int i = 0; i < model.getRowCount(); i++) {
-                if (Integer.parseInt(model.getValueAt(i, 0).toString()) == livro.getId()) {
+                int idTabela = Integer.parseInt(model.getValueAt(i, 0).toString());
+                if (idTabela == livro.getId()) {
+                    // já existe o livro na tabela → soma quantidades
                     int atual = Integer.parseInt(model.getValueAt(i, 4).toString());
-                    model.setValueAt(atual + quantidade, i, 4);
+                    int novaQtd = atual + quantidade;
+
+                    // atualiza quantidade
+                    model.setValueAt(novaQtd, i, 4);
                     found = true;
                     break;
                 }
             }
 
+            // se o livro ainda não estava na tabela, adiciona nova linha
             if (!found) {
+                float valorComDesconto = calcularPrecoComDesconto(livro, quantidade);
                 model.addRow(new Object[]{
                     livro.getId(),
                     livro.getCodigo(),
                     livro.getNome(),
-                    livro.getValor(),
+                    valorComDesconto,
                     quantidade
                 });
             }
 
             txtQuantidade.setText("");
+
+            // recalcula total e atualiza label de desconto (internamente)
             updateTotal();
 
         } catch (Exception e) {
