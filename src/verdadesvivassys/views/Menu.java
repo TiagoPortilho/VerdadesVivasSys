@@ -54,6 +54,9 @@ public class Menu extends javax.swing.JFrame {
         this.addWindowFocusListener(new java.awt.event.WindowFocusListener() {
             @Override
             public void windowGainedFocus(java.awt.event.WindowEvent evt) {
+                loadClientes();
+                loadLivros();
+                loadCidades();
                 int abaSelecionada = jTabbedPane2.getSelectedIndex();
 
                 switch (abaSelecionada) {
