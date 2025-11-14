@@ -57,18 +57,11 @@ public class Menu extends javax.swing.JFrame {
                 loadClientes();
                 loadLivros();
                 loadCidades();
-                int abaSelecionada = jTabbedPane2.getSelectedIndex();
-
-                switch (abaSelecionada) {
-                    case 0 ->
-                        carregarVendasNaTabela();
-                    case 1 ->
-                        carregarClientesNaTabela();
-                    case 2 ->
-                        carregarLivrosNaTabela();
-                    default -> {
-                        /* nenhuma ação */ }
-                }
+                
+                carregarLivrosNaTabela();
+                carregarClientesNaTabela();
+                carregarVendasNaTabela();
+                
             }
 
             @Override
