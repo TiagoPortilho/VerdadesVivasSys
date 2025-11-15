@@ -20,6 +20,7 @@ public class ClienteForm extends javax.swing.JFrame {
         initComponents();
         initCustom();
         setResizable(false);
+        aplicarMascaraTelefone();
     }
 
     public ClienteForm(Cliente cliente) {
@@ -60,6 +61,7 @@ public class ClienteForm extends javax.swing.JFrame {
         }
 
         txtNome.requestFocus();
+        aplicarMascaraTelefone();
     }
 
     private void initCustom() {
@@ -247,6 +249,64 @@ public class ClienteForm extends javax.swing.JFrame {
             cmbCidades.setSelectedIndex(0);
         }
         txtNome.requestFocus();
+    }
+
+    private void aplicarMascaraTelefone() {
+        txtContato.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyReleased(java.awt.event.KeyEvent e) {
+
+                String texto = txtContato.getText()
+                        .replaceAll("[^0-9]", ""); // mantém só números
+
+                int len = texto.length();
+                StringBuilder f = new StringBuilder();
+
+                if (len == 0) {
+                    txtContato.setText("");
+                    return;
+                }
+
+                // DDD
+                if (len <= 2) {
+                    f.append("(").append(texto);
+                } else {
+                    f.append("(").append(texto.substring(0, 2)).append(") ");
+                }
+
+                // FIXO: 10 dígitos (2 DDD + 8 números)
+                if (len > 2 && len <= 6) {
+                    // até metade antes do hífen
+                    f.append(texto.substring(2));
+                } else if (len == 7) {
+                    f.append(texto.substring(2, 6))
+                            .append("-")
+                            .append(texto.substring(6));
+                } // FIXO COMPLETO (8 dígitos no número)
+                else if (len == 10) {
+                    f.append(texto.substring(2, 6))
+                            .append("-")
+                            .append(texto.substring(6, 10));
+                } // CELULAR: 11 dígitos (2 DDD + 9 números)
+                else if (len > 6) {
+                    // Checa se é celular (11 dígitos)
+                    if (len <= 7) {
+                        f.append(texto.substring(2));
+                    } else if (len <= 11) {
+                        f.append(texto.substring(2, 7))
+                                .append("-")
+                                .append(texto.substring(7));
+                    }
+                }
+
+                // Limita tamanho máximo
+                if (len > 11) {
+                    f = new StringBuilder(f.substring(0, 15));
+                }
+
+                txtContato.setText(f.toString());
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")
