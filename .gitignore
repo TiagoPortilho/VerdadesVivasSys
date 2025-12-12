@@ -16,3 +16,4 @@ nb-configuration.xml
 *.war
 *.ear
 *.db
+*.db
