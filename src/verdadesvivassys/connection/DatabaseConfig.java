@@ -8,6 +8,7 @@ public class DatabaseConfig {
 
     public static void initialize() {
         createTables();
+        migrateSchema();
         insertDefaultData();
     }
 
@@ -210,6 +211,98 @@ public class DatabaseConfig {
         } catch (SQLException e) {
             System.out.println("❌ Erro ao inserir dados iniciais: " + e.getMessage());
         }
+    }
+
+    private static void migrateSchema() {
+        try (Connection conn = DriverManager.getConnection(URL); Statement stmt = conn.createStatement()) {
+            boolean addedVendaLivroQuantidade = false;
+            if (tableExists(conn, "Venda_Livro")) {
+                addedVendaLivroQuantidade = ensureColumnExists(
+                        conn,
+                        stmt,
+                        "Venda_Livro",
+                        "quantidade",
+                        "ALTER TABLE Venda_Livro ADD COLUMN quantidade INTEGER NOT NULL DEFAULT 1"
+                );
+            }
+
+            boolean addedVendaTotal = false;
+            if (tableExists(conn, "Venda")) {
+                addedVendaTotal = ensureColumnExists(
+                        conn,
+                        stmt,
+                        "Venda",
+                        "total",
+                        "ALTER TABLE Venda ADD COLUMN total REAL NOT NULL DEFAULT 0"
+                );
+            }
+
+            if (addedVendaLivroQuantidade || addedVendaTotal) {
+                recalculateVendaTotals(conn, stmt);
+            }
+        } catch (SQLException e) {
+            System.out.println("Erro ao migrar schema do banco: " + e.getMessage());
+        }
+    }
+
+    private static boolean ensureColumnExists(Connection conn, Statement stmt, String table, String column, String alterSql) throws SQLException {
+        if (columnExists(conn, table, column)) {
+            return false;
+        }
+        stmt.execute(alterSql);
+        return true;
+    }
+
+    private static boolean columnExists(Connection conn, String table, String column) throws SQLException {
+        String sql = "PRAGMA table_info(" + table + ")";
+        try (Statement pragma = conn.createStatement(); ResultSet rs = pragma.executeQuery(sql)) {
+            while (rs.next()) {
+                if (column.equalsIgnoreCase(rs.getString("name"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean tableExists(Connection conn, String table) throws SQLException {
+        String sql = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND lower(name) = lower(?) LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, table);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private static void recalculateVendaTotals(Connection conn, Statement stmt) throws SQLException {
+        if (!tableExists(conn, "Venda") || !tableExists(conn, "Venda_Livro") || !tableExists(conn, "Livro")) {
+            return;
+        }
+
+        String updateSql;
+        if (columnExists(conn, "Venda_Livro", "quantidade")) {
+            updateSql = """
+                UPDATE Venda
+                SET total = COALESCE((
+                    SELECT SUM(vl.quantidade * l.Valor)
+                    FROM Venda_Livro vl
+                    JOIN Livro l ON l.id = vl.livro_id
+                    WHERE vl.venda_id = Venda.id
+                ), 0)
+                """;
+        } else {
+            updateSql = """
+                UPDATE Venda
+                SET total = COALESCE((
+                    SELECT SUM(l.Valor)
+                    FROM Venda_Livro vl
+                    JOIN Livro l ON l.id = vl.livro_id
+                    WHERE vl.venda_id = Venda.id
+                ), 0)
+                """;
+        }
+        stmt.executeUpdate(updateSql);
     }
 
     public static Connection connect() throws SQLException {

@@ -37,7 +37,7 @@ public class ClienteForm extends javax.swing.JFrame {
         // Limpa campo de cidade manual
         txtAddCidade.setText("");
 
-        // Garante que o combo tenha opções antes de tentar selecionar
+        // Garante que o combo tenha opcoes antes de tentar selecionar
         if (cmbCidades.getItemCount() > 0) {
             String cidadeCliente = cliente.getCidade();
             if (cidadeCliente != null && !cidadeCliente.isBlank()) {
@@ -50,7 +50,7 @@ public class ClienteForm extends javax.swing.JFrame {
                         break;
                     }
                 }
-                // Se não existir no combo, adiciona e seleciona
+                // Se nao existir no combo, adiciona e seleciona
                 if (!found) {
                     cmbCidades.addItem(cidadeCliente);
                     cmbCidades.setSelectedItem(cidadeCliente);
@@ -98,11 +98,11 @@ public class ClienteForm extends javax.swing.JFrame {
                 return;
             }
 
-            // Valida padrão de caracteres (somente letras, espaços, acentos e hífen)
-            if (!nomeCidade.matches("[A-Za-zÀ-ÖØ-öø-ÿ\\s\\-']+")) {
+            // Valida padrao de caracteres (somente letras, espacos e hifen)
+            if (!nomeCidade.matches("[\\p{L}\\s\\-']+")) {
                 javax.swing.JOptionPane.showMessageDialog(this,
-                        "O nome da cidade contém caracteres inválidos.",
-                        "Erro de validação",
+                        "O nome da cidade contem caracteres invalidos.",
+                        "Erro de validacao",
                         javax.swing.JOptionPane.WARNING_MESSAGE);
                 return;
             }
@@ -114,7 +114,7 @@ public class ClienteForm extends javax.swing.JFrame {
             for (String c : cidades) {
                 if (c.equalsIgnoreCase(nomeCidade)) {
                     javax.swing.JOptionPane.showMessageDialog(this,
-                            "Esta cidade já está cadastrada.",
+                            "Esta cidade ja esta cadastrada.",
                             "Duplicado",
                             javax.swing.JOptionPane.WARNING_MESSAGE);
                     return;
@@ -153,25 +153,25 @@ public class ClienteForm extends javax.swing.JFrame {
                     || cmbCidades.getSelectedItem().toString().equals("Nenhuma cidade cadastrada")) {
                 javax.swing.JOptionPane.showMessageDialog(this,
                         "Todos os campos devem ser preenchidos.",
-                        "Erro de validação",
+                        "Erro de validacao",
                         javax.swing.JOptionPane.WARNING_MESSAGE);
                 return false;
             }
 
             String nome = txtNome.getText().trim();
-            if (!nome.matches("[A-Za-zÀ-ÖØ-öø-ÿ\\s\\-']+")) {
+            if (!nome.matches("[\\p{L}\\s\\-']+")) {
                 javax.swing.JOptionPane.showMessageDialog(this,
-                        "O nome contém caracteres inválidos. Use apenas letras e espaços.",
-                        "Erro de validação",
+                        "O nome contem caracteres invalidos. Use apenas letras e espacos.",
+                        "Erro de validacao",
                         javax.swing.JOptionPane.WARNING_MESSAGE);
                 return false;
             }
 
             String cidade = cmbCidades.getSelectedItem().toString();
-            if (!cidade.matches("[A-Za-zÀ-ÖØ-öø-ÿ\\s\\-']+")) {
+            if (!cidade.matches("[\\p{L}\\s\\-']+")) {
                 javax.swing.JOptionPane.showMessageDialog(this,
-                        "A cidade contém caracteres inválidos.",
-                        "Erro de validação",
+                        "A cidade contem caracteres invalidos.",
+                        "Erro de validacao",
                         javax.swing.JOptionPane.WARNING_MESSAGE);
                 return false;
             }
@@ -179,8 +179,8 @@ public class ClienteForm extends javax.swing.JFrame {
             String contato = txtContato.getText().trim();
             if (!contato.matches("[0-9\\+\\-\\s\\(\\)]+")) {
                 javax.swing.JOptionPane.showMessageDialog(this,
-                        "O contato contém caracteres inválidos. Use apenas números e símbolos de telefone.",
-                        "Erro de validação",
+                        "O contato contem caracteres invalidos. Use apenas numeros e simbolos de telefone.",
+                        "Erro de validacao",
                         javax.swing.JOptionPane.WARNING_MESSAGE);
                 return false;
             }
@@ -188,9 +188,9 @@ public class ClienteForm extends javax.swing.JFrame {
             return true;
 
         } catch (Exception e) {
-            logger.log(java.util.logging.Level.SEVERE, "Erro na verificação de dados do cliente", e);
+            logger.log(java.util.logging.Level.SEVERE, "Erro na verificacao de dados do cliente", e);
             javax.swing.JOptionPane.showMessageDialog(this,
-                    "Erro inesperado durante a verificação.",
+                    "Erro inesperado durante a verificacao.",
                     "Erro",
                     javax.swing.JOptionPane.ERROR_MESSAGE);
             return false;
@@ -256,55 +256,33 @@ public class ClienteForm extends javax.swing.JFrame {
             @Override
             public void keyReleased(java.awt.event.KeyEvent e) {
 
-                String texto = txtContato.getText()
-                        .replaceAll("[^0-9]", ""); // mantém só números
+                String texto = txtContato.getText().replaceAll("[^0-9]", "");
+                if (texto.length() > 11) {
+                    texto = texto.substring(0, 11);
+                }
 
                 int len = texto.length();
-                StringBuilder f = new StringBuilder();
-
                 if (len == 0) {
                     txtContato.setText("");
                     return;
                 }
 
-                // DDD
+                String formatado;
                 if (len <= 2) {
-                    f.append("(").append(texto);
+                    formatado = "(" + texto;
+                } else if (len <= 6) {
+                    formatado = "(" + texto.substring(0, 2) + ") " + texto.substring(2);
+                } else if (len <= 10) {
+                    formatado = "(" + texto.substring(0, 2) + ") "
+                            + texto.substring(2, 6) + "-"
+                            + texto.substring(6);
                 } else {
-                    f.append("(").append(texto.substring(0, 2)).append(") ");
+                    formatado = "(" + texto.substring(0, 2) + ") "
+                            + texto.substring(2, 7) + "-"
+                            + texto.substring(7);
                 }
 
-                // FIXO: 10 dígitos (2 DDD + 8 números)
-                if (len > 2 && len <= 6) {
-                    // até metade antes do hífen
-                    f.append(texto.substring(2));
-                } else if (len == 7) {
-                    f.append(texto.substring(2, 6))
-                            .append("-")
-                            .append(texto.substring(6));
-                } // FIXO COMPLETO (8 dígitos no número)
-                else if (len == 10) {
-                    f.append(texto.substring(2, 6))
-                            .append("-")
-                            .append(texto.substring(6, 10));
-                } // CELULAR: 11 dígitos (2 DDD + 9 números)
-                else if (len > 6) {
-                    // Checa se é celular (11 dígitos)
-                    if (len <= 7) {
-                        f.append(texto.substring(2));
-                    } else if (len <= 11) {
-                        f.append(texto.substring(2, 7))
-                                .append("-")
-                                .append(texto.substring(7));
-                    }
-                }
-
-                // Limita tamanho máximo
-                if (len > 11) {
-                    f = new StringBuilder(f.substring(0, 15));
-                }
-
-                txtContato.setText(f.toString());
+                txtContato.setText(formatado);
             }
         });
     }
@@ -484,3 +462,4 @@ public class ClienteForm extends javax.swing.JFrame {
     private javax.swing.JTextField txtNome;
     // End of variables declaration//GEN-END:variables
 }
+

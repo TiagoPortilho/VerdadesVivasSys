@@ -3,10 +3,37 @@ package verdadesvivassys.views;
 import verdadesvivassys.views.venda.VendaForm;
 import verdadesvivassys.views.livro.LivroForm;
 import verdadesvivassys.views.cliente.ClienteForm;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import verdadesvivassys.connection.DatabaseConfig;
@@ -24,6 +51,10 @@ import verdadesvivassys.views.venda.VendaDetail;
 public class Menu extends javax.swing.JFrame {
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Menu.class.getName());
+    private static final String DATABASE_FILE_NAME = "verdadesvivas.db";
+    private static final String DEFAULT_GITHUB_REPOSITORY = "TiagoPortilho/VerdadesVivasSys";
+    private static final Pattern RELEASE_TAG_PATTERN = Pattern.compile("\"tag_name\"\\s*:\\s*\"([^\"]+)\"");
+    private static final Pattern JAR_DOWNLOAD_PATTERN = Pattern.compile("\"browser_download_url\"\\s*:\\s*\"([^\"]+\\.jar)\"");
 
     private LivrosDAO livrosDAO = DAOFactory.getLivrosDAO();
     private ClientesDAO clientesDAO = DAOFactory.getClientesDAO();
@@ -236,6 +267,462 @@ public class Menu extends javax.swing.JFrame {
         return (int) tblVendas.getValueAt(row, 0);
     }
 
+    private Path getCurrentDatabasePath() {
+        return Path.of(DATABASE_FILE_NAME).toAbsolutePath().normalize();
+    }
+
+    private String buildJdbcUrl(Path dbPath) {
+        return "jdbc:sqlite:" + dbPath.toAbsolutePath().normalize();
+    }
+
+    private Path withExtension(Path path, String extension) {
+        String fileName = path.getFileName().toString();
+        if (fileName.toLowerCase(Locale.ROOT).endsWith(extension)) {
+            return path;
+        }
+        Path parent = path.getParent();
+        String newName = fileName + extension;
+        return parent == null ? Path.of(newName) : parent.resolve(newName);
+    }
+
+    private String timestampSuffix() {
+        return DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss").format(LocalDateTime.now());
+    }
+
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        String sql = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND lower(name) = lower(?) LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, tableName);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private boolean columnExists(Connection conn, String tableName, String columnName) throws SQLException {
+        String sql = "PRAGMA table_info(" + tableName + ")";
+        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                if (columnName.equalsIgnoreCase(rs.getString("name"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean isBlank(String text) {
+        return text == null || text.isBlank();
+    }
+
+    private void exportDatabaseCopy(Path destinationPath) throws IOException {
+        Path sourceDbPath = getCurrentDatabasePath();
+        if (!Files.exists(sourceDbPath)) {
+            throw new IOException("Banco atual nao foi encontrado em: " + sourceDbPath);
+        }
+
+        Path normalizedDestination = destinationPath.toAbsolutePath().normalize();
+        if (normalizedDestination.equals(sourceDbPath)) {
+            throw new IOException("Escolha um destino diferente do banco atual.");
+        }
+
+        if (normalizedDestination.getParent() != null) {
+            Files.createDirectories(normalizedDestination.getParent());
+        }
+
+        Files.copy(sourceDbPath, normalizedDestination, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private String sanitizeSheetName(String name) {
+        String sanitized = name.replaceAll("[\\\\/:*?\\[\\]]", "_");
+        if (sanitized.length() > 31) {
+            return sanitized.substring(0, 31);
+        }
+        return sanitized;
+    }
+
+    private String escapeXml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
+    }
+
+    private void writeCell(BufferedWriter writer, Object value, String styleId) throws IOException {
+        String styleAttr = isBlank(styleId) ? "" : " ss:StyleID=\"" + styleId + "\"";
+        if (value instanceof Number number) {
+            writer.write("        <Cell" + styleAttr + "><Data ss:Type=\"Number\">");
+            writer.write(escapeXml(number.toString()));
+            writer.write("</Data></Cell>\n");
+            return;
+        }
+
+        writer.write("        <Cell" + styleAttr + "><Data ss:Type=\"String\">");
+        writer.write(escapeXml(value == null ? "" : value.toString()));
+        writer.write("</Data></Cell>\n");
+    }
+
+    private void writeSheetFromQuery(BufferedWriter writer,
+                                     Connection conn,
+                                     String sheetName,
+                                     String query,
+                                     String[] headers,
+                                     int[] columnWidths,
+                                     Set<Integer> currencyColumns) throws SQLException, IOException {
+
+        writer.write("  <Worksheet ss:Name=\"");
+        writer.write(escapeXml(sanitizeSheetName(sheetName)));
+        writer.write("\">\n");
+        writer.write("    <Table>\n");
+
+        if (columnWidths != null && columnWidths.length > 0) {
+            for (int width : columnWidths) {
+                writer.write("      <Column ss:AutoFitWidth=\"0\" ss:Width=\"" + Math.max(30, width) + "\"/>\n");
+            }
+        }
+
+        writer.write("      <Row>\n");
+        for (String header : headers) {
+            writer.write("        <Cell ss:StyleID=\"Header\"><Data ss:Type=\"String\">");
+            writer.write(escapeXml(header));
+            writer.write("</Data></Cell>\n");
+        }
+        writer.write("      </Row>\n");
+
+        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(query)) {
+            while (rs.next()) {
+                writer.write("      <Row>\n");
+                for (int i = 1; i <= headers.length; i++) {
+                    String style = (currencyColumns != null && currencyColumns.contains(i)) ? "Currency" : "Cell";
+                    writeCell(writer, rs.getObject(i), style);
+                }
+                writer.write("      </Row>\n");
+            }
+        }
+
+        writer.write("    </Table>\n");
+        writer.write("  </Worksheet>\n");
+    }
+
+    private void exportDatabaseToExcel(Path destinationPath) throws IOException, SQLException {
+        Path dbPath = getCurrentDatabasePath();
+        if (!Files.exists(dbPath)) {
+            throw new IOException("Banco atual nao foi encontrado em: " + dbPath);
+        }
+
+        Path normalizedDestination = destinationPath.toAbsolutePath().normalize();
+        if (normalizedDestination.getParent() != null) {
+            Files.createDirectories(normalizedDestination.getParent());
+        }
+
+        try (Connection conn = DriverManager.getConnection(buildJdbcUrl(dbPath));
+             BufferedWriter writer = Files.newBufferedWriter(
+                     normalizedDestination,
+                     StandardCharsets.UTF_8,
+                     StandardOpenOption.CREATE,
+                     StandardOpenOption.TRUNCATE_EXISTING)) {
+
+            writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+            writer.write("<?mso-application progid=\"Excel.Sheet\"?>\n");
+            writer.write("<Workbook xmlns=\"urn:schemas-microsoft-com:office:spreadsheet\"\n");
+            writer.write(" xmlns:o=\"urn:schemas-microsoft-com:office:office\"\n");
+            writer.write(" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"\n");
+            writer.write(" xmlns:ss=\"urn:schemas-microsoft-com:office:spreadsheet\">\n");
+            writer.write(" <Styles>\n");
+            writer.write("  <Style ss:ID=\"Header\">\n");
+            writer.write("   <Font ss:Bold=\"1\" ss:Color=\"#FFFFFF\"/>\n");
+            writer.write("   <Interior ss:Color=\"#1F4E78\" ss:Pattern=\"Solid\"/>\n");
+            writer.write("   <Alignment ss:Horizontal=\"Center\" ss:Vertical=\"Center\"/>\n");
+            writer.write("   <Borders>\n");
+            writer.write("    <Border ss:Position=\"Bottom\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>\n");
+            writer.write("    <Border ss:Position=\"Left\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>\n");
+            writer.write("    <Border ss:Position=\"Right\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>\n");
+            writer.write("    <Border ss:Position=\"Top\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>\n");
+            writer.write("   </Borders>\n");
+            writer.write("  </Style>\n");
+            writer.write("  <Style ss:ID=\"Cell\">\n");
+            writer.write("   <Alignment ss:Vertical=\"Center\" ss:WrapText=\"1\"/>\n");
+            writer.write("   <Borders>\n");
+            writer.write("    <Border ss:Position=\"Bottom\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>\n");
+            writer.write("    <Border ss:Position=\"Left\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>\n");
+            writer.write("    <Border ss:Position=\"Right\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>\n");
+            writer.write("    <Border ss:Position=\"Top\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>\n");
+            writer.write("   </Borders>\n");
+            writer.write("  </Style>\n");
+            writer.write("  <Style ss:ID=\"Currency\">\n");
+            writer.write("   <Alignment ss:Horizontal=\"Right\" ss:Vertical=\"Center\"/>\n");
+            writer.write("   <NumberFormat ss:Format=\"&quot;R$&quot; #,##0.00\"/>\n");
+            writer.write("   <Borders>\n");
+            writer.write("    <Border ss:Position=\"Bottom\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>\n");
+            writer.write("    <Border ss:Position=\"Left\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>\n");
+            writer.write("    <Border ss:Position=\"Right\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>\n");
+            writer.write("    <Border ss:Position=\"Top\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>\n");
+            writer.write("   </Borders>\n");
+            writer.write("  </Style>\n");
+            writer.write(" </Styles>\n");
+
+            writeSheetFromQuery(
+                    writer,
+                    conn,
+                    "Clientes",
+                    "SELECT id, Nome, Cidade, Contato FROM Cliente ORDER BY id ASC",
+                    new String[]{"ID", "Nome", "Cidade", "Contato"},
+                    new int[]{60, 220, 160, 180},
+                    Set.of()
+            );
+
+            writeSheetFromQuery(
+                    writer,
+                    conn,
+                    "Livros",
+                    "SELECT id, codigo, Nome, Valor FROM Livro ORDER BY id ASC",
+                    new String[]{"ID", "Codigo", "Nome", "Valor"},
+                    new int[]{60, 90, 320, 100},
+                    Set.of(4)
+            );
+
+            boolean hasVendaLivroTable = tableExists(conn, "Venda_Livro");
+            boolean hasLivroTable = tableExists(conn, "Livro");
+            boolean hasQuantidadeColumn = hasVendaLivroTable && columnExists(conn, "Venda_Livro", "quantidade");
+
+            String vendasQuery;
+            if (hasVendaLivroTable && hasLivroTable) {
+                vendasQuery = hasQuantidadeColumn
+                        ? """
+                          SELECT
+                              v.id,
+                              c.Nome AS cliente,
+                              c.Cidade AS cidade,
+                              COALESCE(
+                                  GROUP_CONCAT(
+                                      CASE
+                                          WHEN l.Nome IS NULL THEN NULL
+                                          WHEN vl.quantidade > 1 THEN l.Nome || ' (x' || vl.quantidade || ')'
+                                          ELSE l.Nome
+                                      END,
+                                      ', '
+                                  ),
+                                  ''
+                              ) AS livros,
+                              CASE
+                                  WHEN v.total > 0 THEN v.total
+                                  ELSE COALESCE(SUM(vl.quantidade * l.Valor), 0)
+                              END AS total
+                          FROM Venda v
+                          JOIN Cliente c ON c.id = v.cliente_id
+                          LEFT JOIN Venda_Livro vl ON vl.venda_id = v.id
+                          LEFT JOIN Livro l ON l.id = vl.livro_id
+                          GROUP BY v.id, c.Nome, c.Cidade, v.total
+                          ORDER BY v.id ASC
+                          """
+                        : """
+                          SELECT
+                              v.id,
+                              c.Nome AS cliente,
+                              c.Cidade AS cidade,
+                              COALESCE(GROUP_CONCAT(l.Nome, ', '), '') AS livros,
+                              CASE
+                                  WHEN v.total > 0 THEN v.total
+                                  ELSE COALESCE(SUM(l.Valor), 0)
+                              END AS total
+                          FROM Venda v
+                          JOIN Cliente c ON c.id = v.cliente_id
+                          LEFT JOIN Venda_Livro vl ON vl.venda_id = v.id
+                          LEFT JOIN Livro l ON l.id = vl.livro_id
+                          GROUP BY v.id, c.Nome, c.Cidade, v.total
+                          ORDER BY v.id ASC
+                          """;
+            } else {
+                vendasQuery = """
+                        SELECT
+                            v.id,
+                            c.Nome AS cliente,
+                            c.Cidade AS cidade,
+                            '' AS livros,
+                            v.total
+                        FROM Venda v
+                        JOIN Cliente c ON c.id = v.cliente_id
+                        ORDER BY v.id ASC
+                        """;
+            }
+
+            writeSheetFromQuery(
+                    writer,
+                    conn,
+                    "Vendas",
+                    vendasQuery,
+                    new String[]{"ID Venda", "Cliente", "Cidade", "Livros", "Total"},
+                    new int[]{70, 220, 160, 500, 120},
+                    Set.of(5)
+            );
+
+            writer.write("</Workbook>\n");
+        }
+    }
+
+    private String getGithubRepository() {
+        String configured = System.getProperty("vv.github.repo");
+        return isBlank(configured) ? DEFAULT_GITHUB_REPOSITORY : configured.trim();
+    }
+
+    private String extractFirstGroup(String text, Pattern pattern) {
+        Matcher matcher = pattern.matcher(text);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    private String parseAssetFileName(String downloadUrl) {
+        String urlWithoutParams = downloadUrl.split("\\?")[0];
+        int slash = urlWithoutParams.lastIndexOf('/');
+        if (slash >= 0 && slash < urlWithoutParams.length() - 1) {
+            return urlWithoutParams.substring(slash + 1);
+        }
+        return "VerdadesVivasSys.jar";
+    }
+
+    private ReleaseAsset fetchLatestReleaseJarAsset() throws IOException, InterruptedException {
+        String apiUrl = "https://api.github.com/repos/" + getGithubRepository() + "/releases/latest";
+
+        HttpClient client = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(apiUrl))
+                .header("Accept", "application/vnd.github+json")
+                .header("User-Agent", "VerdadesVivasSys-Updater")
+                .GET()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (response.statusCode() != 200) {
+            throw new IOException("Falha ao consultar o release no GitHub. HTTP " + response.statusCode());
+        }
+
+        String body = response.body();
+        String tagName = extractFirstGroup(body, RELEASE_TAG_PATTERN);
+        String jarUrl = extractFirstGroup(body, JAR_DOWNLOAD_PATTERN);
+
+        if (isBlank(jarUrl)) {
+            throw new IOException("Nenhum arquivo .jar foi encontrado no ultimo release.");
+        }
+
+        jarUrl = jarUrl.replace("\\/", "/");
+        return new ReleaseAsset(
+                isBlank(tagName) ? "latest" : tagName,
+                parseAssetFileName(jarUrl),
+                jarUrl
+        );
+    }
+
+    private Path downloadLatestJar(String downloadUrl) throws IOException, InterruptedException {
+        Path downloadedJar = Files.createTempFile("verdadesvivas-update-", ".jar");
+
+        HttpClient client = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(downloadUrl))
+                .header("User-Agent", "VerdadesVivasSys-Updater")
+                .GET()
+                .build();
+
+        HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        if (response.statusCode() != 200) {
+            throw new IOException("Falha ao baixar o JAR do release. HTTP " + response.statusCode());
+        }
+
+        try (InputStream in = response.body()) {
+            Files.copy(in, downloadedJar, StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        return downloadedJar;
+    }
+
+    private Path resolveRunningJarPath() throws URISyntaxException {
+        var codeSource = Menu.class.getProtectionDomain().getCodeSource();
+        if (codeSource == null) {
+            return null;
+        }
+
+        Path location = Path.of(codeSource.getLocation().toURI()).toAbsolutePath().normalize();
+        if (Files.isRegularFile(location) && location.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar")) {
+            return location;
+        }
+        return null;
+    }
+
+    private String resolveJavaCommand() {
+        Path javaw = Path.of(System.getProperty("java.home"), "bin", "javaw.exe");
+        if (Files.exists(javaw)) {
+            return javaw.toAbsolutePath().toString();
+        }
+
+        Path java = Path.of(System.getProperty("java.home"), "bin", "java.exe");
+        if (Files.exists(java)) {
+            return java.toAbsolutePath().toString();
+        }
+
+        return "javaw";
+    }
+
+    private Path createUpdateScript(Path runningJar, Path downloadedJar) throws IOException {
+        Path scriptPath = Files.createTempFile("verdadesvivas-updater-", ".bat");
+        String javaCommand = resolveJavaCommand();
+
+        String script = String.join("\r\n",
+                "@echo off",
+                "setlocal",
+                "timeout /t 2 /nobreak >nul",
+                "copy /Y \"" + downloadedJar.toAbsolutePath() + "\" \"" + runningJar.toAbsolutePath() + "\" >nul",
+                "if errorlevel 1 (",
+                "  echo Falha ao atualizar o arquivo do sistema.",
+                "  pause",
+                "  exit /b 1",
+                ")",
+                "start \"\" \"" + javaCommand + "\" -jar \"" + runningJar.toAbsolutePath() + "\"",
+                "del /f /q \"" + downloadedJar.toAbsolutePath() + "\"",
+                "del /f /q \"%~f0\""
+        );
+
+        Files.writeString(
+                scriptPath,
+                script,
+                StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING
+        );
+
+        return scriptPath;
+    }
+
+    private void runUpdateScript(Path scriptPath) throws IOException {
+        new ProcessBuilder("cmd.exe", "/c", scriptPath.toAbsolutePath().toString()).start();
+    }
+
+    private PendingUpdate updateSystemFromGithub() throws Exception {
+        Path runningJarPath = resolveRunningJarPath();
+        if (runningJarPath == null) {
+            throw new IllegalStateException("A atualizacao automatica funciona apenas quando o sistema e executado pelo arquivo .jar.");
+        }
+
+        ReleaseAsset releaseAsset = fetchLatestReleaseJarAsset();
+        Path downloadedJar = downloadLatestJar(releaseAsset.downloadUrl());
+        Path updateScript = createUpdateScript(runningJarPath, downloadedJar);
+        return new PendingUpdate(releaseAsset, updateScript);
+    }
+
+    private record ReleaseAsset(String tag, String fileName, String downloadUrl) {
+    }
+
+    private record PendingUpdate(ReleaseAsset releaseAsset, Path scriptPath) {
+    }
+
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -285,6 +772,13 @@ public class Menu extends javax.swing.JFrame {
         btnLimpar3 = new javax.swing.JButton();
         btnFiltrar3 = new javax.swing.JButton();
         btnDetalhesLivros = new javax.swing.JButton();
+        jPanel4 = new javax.swing.JPanel();
+        lblImportar = new javax.swing.JLabel();
+        lblExportar = new javax.swing.JLabel();
+        btnExportDatabase = new javax.swing.JButton();
+        btnExportExcel = new javax.swing.JButton();
+        lblExportar1 = new javax.swing.JLabel();
+        btnUpdateSystem = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("VerdadesVivasSys");
@@ -777,6 +1271,83 @@ public class Menu extends javax.swing.JFrame {
 
         jTabbedPane2.addTab("Livros", jPanel3);
 
+        lblImportar.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
+        lblImportar.setText("Importar");
+
+        lblExportar.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
+        lblExportar.setText("Exportar");
+
+        btnExportDatabase.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        btnExportDatabase.setText("Banco de dados");
+        btnExportDatabase.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnExportDatabaseActionPerformed(evt);
+            }
+        });
+
+        btnExportExcel.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        btnExportExcel.setText("Excel");
+        btnExportExcel.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnExportExcelActionPerformed(evt);
+            }
+        });
+
+        lblExportar1.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
+        lblExportar1.setText("Outros");
+
+        btnUpdateSystem.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        btnUpdateSystem.setText("Atualizar Sistema");
+        btnUpdateSystem.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnUpdateSystemActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
+        jPanel4.setLayout(jPanel4Layout);
+        jPanel4Layout.setHorizontalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(btnExportExcel, javax.swing.GroupLayout.PREFERRED_SIZE, 166, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(jPanel4Layout.createSequentialGroup()
+                            .addGap(78, 78, 78)
+                            .addComponent(lblImportar)
+                            .addGap(223, 223, 223)
+                            .addComponent(lblExportar))
+                        .addGroup(jPanel4Layout.createSequentialGroup()
+                            .addGap(349, 349, 349)
+                            .addComponent(btnExportDatabase, javax.swing.GroupLayout.PREFERRED_SIZE, 166, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 138, Short.MAX_VALUE)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
+                        .addComponent(btnUpdateSystem, javax.swing.GroupLayout.PREFERRED_SIZE, 166, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(56, 56, 56))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
+                        .addComponent(lblExportar1)
+                        .addGap(107, 107, 107))))
+        );
+        jPanel4Layout.setVerticalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addGap(36, 36, 36)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblImportar)
+                    .addComponent(lblExportar)
+                    .addComponent(lblExportar1))
+                .addGap(28, 28, 28)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnExportDatabase, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnUpdateSystem, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addComponent(btnExportExcel, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(418, Short.MAX_VALUE))
+        );
+
+        jTabbedPane2.addTab("Extra", jPanel4);
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -1108,6 +1679,105 @@ public class Menu extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_btnDetalhesVendaActionPerformed
 
+    private void btnExportDatabaseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExportDatabaseActionPerformed
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Salvar copia do banco");
+        chooser.setFileFilter(new FileNameExtensionFilter("Banco SQLite (*.db)", "db"));
+        chooser.setSelectedFile(new java.io.File("verdadesvivas-backup-" + timestampSuffix() + ".db"));
+
+        int option = chooser.showSaveDialog(this);
+        if (option != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        Path destinationPath = withExtension(chooser.getSelectedFile().toPath(), ".db");
+
+        try {
+            exportDatabaseCopy(destinationPath);
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Backup exportado com sucesso para:\n" + destinationPath,
+                    "Exportar banco",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Nao foi possivel exportar o banco.\n" + ex.getMessage(),
+                    "Erro ao exportar",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }//GEN-LAST:event_btnExportDatabaseActionPerformed
+
+    private void btnExportExcelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExportExcelActionPerformed
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Salvar planilha do Excel");
+        chooser.setFileFilter(new FileNameExtensionFilter("Planilha Excel 2003 XML (*.xls)", "xls"));
+        chooser.setSelectedFile(new java.io.File("verdadesvivas-relatorio-" + timestampSuffix() + ".xls"));
+
+        int option = chooser.showSaveDialog(this);
+        if (option != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        Path destinationPath = withExtension(chooser.getSelectedFile().toPath(), ".xls");
+
+        try {
+            exportDatabaseToExcel(destinationPath);
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Planilha gerada com sucesso em:\n" + destinationPath,
+                    "Exportar Excel",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Nao foi possivel exportar para Excel.\n" + ex.getMessage(),
+                    "Erro ao exportar",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }//GEN-LAST:event_btnExportExcelActionPerformed
+
+    private void btnUpdateSystemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUpdateSystemActionPerformed
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "O sistema vai baixar o ultimo release e substituir o arquivo .jar atual.\nDeseja continuar?",
+                "Atualizar sistema",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        );
+
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        try {
+            PendingUpdate pendingUpdate = updateSystemFromGithub();
+            ReleaseAsset release = pendingUpdate.releaseAsset();
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Atualizacao " + release.tag() + " (" + release.fileName() + ") baixada.\n"
+                    + "Clique em OK para fechar e reabrir o sistema com a nova versão.",
+                    "Atualizar sistema",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+            runUpdateScript(pendingUpdate.scriptPath());
+            dispose();
+            System.exit(0);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Nao foi possivel atualizar o sistema.\n" + ex.getMessage(),
+                    "Erro ao atualizar",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }//GEN-LAST:event_btnUpdateSystemActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -1140,6 +1810,8 @@ public class Menu extends javax.swing.JFrame {
     private javax.swing.JButton btnDetalhesCliente;
     private javax.swing.JButton btnDetalhesLivros;
     private javax.swing.JButton btnDetalhesVenda;
+    private javax.swing.JButton btnExportDatabase;
+    private javax.swing.JButton btnExportExcel;
     private javax.swing.JButton btnFiltrar2;
     private javax.swing.JButton btnFiltrar3;
     private javax.swing.JButton btnFiltrarVendas;
@@ -1151,6 +1823,7 @@ public class Menu extends javax.swing.JFrame {
     private javax.swing.JButton btnNewVendas;
     private javax.swing.JButton btnUpdateClientes;
     private javax.swing.JButton btnUpdateLivros;
+    private javax.swing.JButton btnUpdateSystem;
     private javax.swing.JButton btnUpdateVendas;
     private javax.swing.JComboBox<String> cmbCidades;
     private javax.swing.JComboBox<String> cmbCidades2;
@@ -1162,6 +1835,7 @@ public class Menu extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
+    private javax.swing.JPanel jPanel4;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
@@ -1172,6 +1846,9 @@ public class Menu extends javax.swing.JFrame {
     private javax.swing.JLabel lblCliente2;
     private javax.swing.JLabel lblClientes;
     private javax.swing.JLabel lblCodigo;
+    private javax.swing.JLabel lblExportar;
+    private javax.swing.JLabel lblExportar1;
+    private javax.swing.JLabel lblImportar;
     private javax.swing.JLabel lblLivro;
     private javax.swing.JLabel lblLivros;
     private javax.swing.JLabel lblNomeLivro;
