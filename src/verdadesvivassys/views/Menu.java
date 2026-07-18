@@ -532,6 +532,7 @@ public class Menu extends javax.swing.JFrame {
             boolean hasVendaLivroTable = tableExists(conn, "Venda_Livro");
             boolean hasLivroTable = tableExists(conn, "Livro");
             boolean hasQuantidadeColumn = hasVendaLivroTable && columnExists(conn, "Venda_Livro", "quantidade");
+            boolean hasCreatedAtColumn = columnExists(conn, "Venda", "created_at");
 
             String vendasQuery;
             if (hasVendaLivroTable && hasLivroTable) {
@@ -541,6 +542,7 @@ public class Menu extends javax.swing.JFrame {
                               v.id,
                               c.Nome AS cliente,
                               c.Cidade AS cidade,
+                              COALESCE(v.created_at, '') AS data_venda,
                               COALESCE(
                                   GROUP_CONCAT(
                                       CASE
@@ -560,7 +562,7 @@ public class Menu extends javax.swing.JFrame {
                           JOIN Cliente c ON c.id = v.cliente_id
                           LEFT JOIN Venda_Livro vl ON vl.venda_id = v.id
                           LEFT JOIN Livro l ON l.id = vl.livro_id
-                          GROUP BY v.id, c.Nome, c.Cidade, v.total
+                          GROUP BY v.id, c.Nome, c.Cidade, v.total, v.created_at
                           ORDER BY v.id ASC
                           """
                         : """
@@ -568,6 +570,7 @@ public class Menu extends javax.swing.JFrame {
                               v.id,
                               c.Nome AS cliente,
                               c.Cidade AS cidade,
+                              COALESCE(v.created_at, '') AS data_venda,
                               COALESCE(GROUP_CONCAT(l.Nome, ', '), '') AS livros,
                               CASE
                                   WHEN v.total > 0 THEN v.total
@@ -577,7 +580,7 @@ public class Menu extends javax.swing.JFrame {
                           JOIN Cliente c ON c.id = v.cliente_id
                           LEFT JOIN Venda_Livro vl ON vl.venda_id = v.id
                           LEFT JOIN Livro l ON l.id = vl.livro_id
-                          GROUP BY v.id, c.Nome, c.Cidade, v.total
+                          GROUP BY v.id, c.Nome, c.Cidade, v.total, v.created_at
                           ORDER BY v.id ASC
                           """;
             } else {
@@ -586,6 +589,7 @@ public class Menu extends javax.swing.JFrame {
                             v.id,
                             c.Nome AS cliente,
                             c.Cidade AS cidade,
+                            COALESCE(v.created_at, '') AS data_venda,
                             '' AS livros,
                             v.total
                         FROM Venda v
@@ -599,10 +603,35 @@ public class Menu extends javax.swing.JFrame {
                     conn,
                     "Vendas",
                     vendasQuery,
-                    new String[]{"ID Venda", "Cliente", "Cidade", "Livros", "Total"},
-                    new int[]{70, 220, 160, 500, 120},
-                    Set.of(5)
+                    new String[]{"ID Venda", "Cliente", "Cidade", "Data da Venda", "Livros", "Total"},
+                    new int[]{70, 220, 160, 160, 500, 120},
+                    Set.of(6)
             );
+
+            if (hasVendaLivroTable && hasLivroTable && hasQuantidadeColumn && hasCreatedAtColumn) {
+                String livrosPorDiaQuery = """
+                        SELECT
+                            l.Nome AS livro,
+                            COALESCE(DATE(v.created_at), 'Sem data') AS data,
+                            SUM(vl.quantidade) AS quantidade,
+                            SUM(vl.quantidade * l.Valor) AS valor_total
+                        FROM Venda_Livro vl
+                        JOIN Livro l ON l.id = vl.livro_id
+                        JOIN Venda v ON v.id = vl.venda_id
+                        GROUP BY l.Nome, DATE(v.created_at)
+                        ORDER BY DATE(v.created_at), l.Nome
+                        """;
+
+                writeSheetFromQuery(
+                        writer,
+                        conn,
+                        "Livros por Dia",
+                        livrosPorDiaQuery,
+                        new String[]{"Livro", "Data", "Quantidade", "Valor Total"},
+                        new int[]{320, 120, 100, 120},
+                        Set.of(4)
+                );
+            }
 
             writer.write("</Workbook>\n");
         }

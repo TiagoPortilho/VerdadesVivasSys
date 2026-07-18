@@ -9,7 +9,9 @@ public class Venda {
     private Cliente cliente;
     private List<Livro> livros = new ArrayList<>();
     private float total;
-    
+    private String createdAt;
+    private String updatedAt;
+
     public Venda(){}
 
     public Venda(int id, Cliente cliente, List<Livro> livros, float total) {
@@ -49,5 +51,21 @@ public class Venda {
 
     public float getTotal() {
         return total;
+    }
+
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public String getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(String updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

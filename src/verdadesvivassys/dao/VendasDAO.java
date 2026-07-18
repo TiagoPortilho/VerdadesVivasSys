@@ -15,7 +15,7 @@ public class VendasDAO {
      * se tudo ocorreu bem.
      */
     public boolean addVenda(Venda venda) {
-        String sqlVenda = "INSERT INTO Venda (cliente_id, total) VALUES (?, ?)";
+        String sqlVenda = "INSERT INTO Venda (cliente_id, total, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
         String sqlVendaLivro = "INSERT INTO Venda_Livro (venda_id, livro_id, quantidade) VALUES (?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.connect()) {
@@ -70,10 +70,12 @@ public class VendasDAO {
         List<Venda> vendas = new ArrayList<>();
 
         String sql = """
-        SELECT 
-            v.id AS venda_id, 
+        SELECT
+            v.id AS venda_id,
             v.total,
-            c.id AS cliente_id, 
+            v.created_at,
+            v.updated_at,
+            c.id AS cliente_id,
             c.Nome AS cliente_nome,
             c.Cidade AS cliente_cidade,
 
@@ -100,6 +102,8 @@ public class VendasDAO {
                 Venda venda = new Venda();
                 venda.setId(rs.getInt("venda_id"));
                 venda.setTotal(rs.getFloat("total"));
+                venda.setCreatedAt(rs.getString("created_at"));
+                venda.setUpdatedAt(rs.getString("updated_at"));
 
                 Cliente cliente = new Cliente();
                 cliente.setId(rs.getInt("cliente_id"));
@@ -196,10 +200,12 @@ public class VendasDAO {
         Venda venda = null;
 
         String sqlVenda = """
-        SELECT 
-            v.id AS venda_id, 
+        SELECT
+            v.id AS venda_id,
             v.total,
-            c.id AS cliente_id, 
+            v.created_at,
+            v.updated_at,
+            c.id AS cliente_id,
             c.Nome AS cliente_nome,
             c.Cidade AS cliente_cidade,
             c.Contato AS cliente_contato
@@ -224,6 +230,8 @@ public class VendasDAO {
                     venda = new Venda();
                     venda.setId(rsVenda.getInt("venda_id"));
                     venda.setTotal(rsVenda.getFloat("total"));
+                    venda.setCreatedAt(rsVenda.getString("created_at"));
+                    venda.setUpdatedAt(rsVenda.getString("updated_at"));
 
                     Cliente cliente = new Cliente();
                     cliente.setId(rsVenda.getInt("cliente_id"));
@@ -264,7 +272,7 @@ public class VendasDAO {
 
     public boolean updateVenda(Venda venda) {
         String sqlDeleteVL = "DELETE FROM Venda_Livro WHERE venda_id = ?";
-        String sqlUpdateV = "UPDATE Venda SET cliente_id = ?, total = ? WHERE id = ?";
+        String sqlUpdateV = "UPDATE Venda SET cliente_id = ?, total = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
         String sqlInsertVL = "INSERT INTO Venda_Livro (venda_id, livro_id, quantidade) VALUES (?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.connect()) {

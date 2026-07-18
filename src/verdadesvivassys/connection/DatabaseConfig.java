@@ -235,6 +235,10 @@ public class DatabaseConfig {
                         "total",
                         "ALTER TABLE Venda ADD COLUMN total REAL NOT NULL DEFAULT 0"
                 );
+                ensureColumnExists(conn, stmt, "Venda", "created_at",
+                        "ALTER TABLE Venda ADD COLUMN created_at TEXT");
+                ensureColumnExists(conn, stmt, "Venda", "updated_at",
+                        "ALTER TABLE Venda ADD COLUMN updated_at TEXT");
             }
 
             if (addedVendaLivroQuantidade || addedVendaTotal) {
