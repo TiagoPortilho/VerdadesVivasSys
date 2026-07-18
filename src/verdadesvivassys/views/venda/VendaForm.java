@@ -19,7 +19,9 @@ public class VendaForm extends javax.swing.JFrame {
     private ClientesDAO clientesDAO = DAOFactory.getClientesDAO();
     private int editid = -1;
     private final java.util.List<String> allClienteNames = new java.util.ArrayList<>();
+    private final java.util.List<String> allClienteKeys  = new java.util.ArrayList<>(); // nome-only para filtro
     private final java.util.List<String> allLivroNames   = new java.util.ArrayList<>();
+    private final java.util.Map<String, Cliente> clienteDisplayMap = new java.util.LinkedHashMap<>();
 
     public VendaForm() {
         initComponents();
@@ -31,7 +33,7 @@ public class VendaForm extends javax.swing.JFrame {
         cmbLivro.setEditable(true);
         cmbCliente.setSelectedItem(null);
         cmbLivro.setSelectedItem(null);
-        setupSubstringAutoComplete(cmbCliente, allClienteNames);
+        setupSubstringAutoComplete(cmbCliente, allClienteNames, allClienteKeys);
         setupSubstringAutoComplete(cmbLivro, allLivroNames);
 
         clearFields();
@@ -62,14 +64,17 @@ public class VendaForm extends javax.swing.JFrame {
         cmbLivro.setEditable(true);
         cmbCliente.setSelectedItem(null);
         cmbLivro.setSelectedItem(null);
-        setupSubstringAutoComplete(cmbCliente, allClienteNames);
+        setupSubstringAutoComplete(cmbCliente, allClienteNames, allClienteKeys);
         setupSubstringAutoComplete(cmbLivro, allLivroNames);
 
         // título adaptado
         lblTitulo.setText("Editar Venda #" + venda.getId());
 
         // seleciona o cliente correspondente
-        cmbCliente.setSelectedItem(venda.getCliente().getNome());
+        Cliente vc = venda.getCliente();
+        String displayCliente = (vc.getCidade() != null && !vc.getCidade().isBlank())
+                ? vc.getNome() + " - " + vc.getCidade() : vc.getNome();
+        cmbCliente.setSelectedItem(displayCliente);
 
         // limpa tabela e preenche com os livros da venda (agora incluindo quantidade e aplicando desconto)
         DefaultTableModel model = (DefaultTableModel) tblLivros.getModel();
@@ -106,12 +111,19 @@ public class VendaForm extends javax.swing.JFrame {
 
     private void loadClientes() {
         allClienteNames.clear();
+        allClienteKeys.clear();
+        clienteDisplayMap.clear();
         for (Cliente c : clientesDAO.getAllClientes()) {
             if (c.getNome() != null && !c.getNome().isBlank()) {
-                allClienteNames.add(c.getNome());
+                String display = (c.getCidade() != null && !c.getCidade().isBlank())
+                        ? c.getNome() + " - " + c.getCidade()
+                        : c.getNome();
+                allClienteNames.add(display);
+                allClienteKeys.add(c.getNome());
+                clienteDisplayMap.put(display, c);
             }
         }
-        resetCombo(cmbCliente, allClienteNames);
+        resetCombo(cmbCliente, allClienteNames, allClienteKeys);
     }
 
     private void loadLivros() {
@@ -240,18 +252,16 @@ public class VendaForm extends javax.swing.JFrame {
             }
 
             // 2️⃣ Pegar o cliente selecionado
-            String nomeCliente = cmbCliente.getSelectedItem().toString();
-            java.util.List<Cliente> clientes = clientesDAO.getByNome(nomeCliente);
+            String displaySel = cmbCliente.getSelectedItem().toString();
+            Cliente cliente = clienteDisplayMap.get(displaySel);
 
-            if (clientes == null || clientes.isEmpty()) {
+            if (cliente == null) {
                 JOptionPane.showMessageDialog(this,
                         "Cliente inválido. Atualize a lista e tente novamente.",
                         "Erro",
                         JOptionPane.ERROR_MESSAGE);
                 return;
             }
-
-            Cliente cliente = clientes.get(0);
 
             // 3️⃣ Montar lista de livros com quantidade
             DefaultTableModel model = (DefaultTableModel) tblLivros.getModel();
@@ -420,6 +430,21 @@ public class VendaForm extends javax.swing.JFrame {
         }
     }
 
+    private void filterCombo(javax.swing.JComboBox<String> combo, java.util.List<String> displayItems,
+                              java.util.List<String> filterKeys, String text) {
+        String lower = text.toLowerCase();
+        javax.swing.DefaultComboBoxModel<String> m = (javax.swing.DefaultComboBoxModel<String>) combo.getModel();
+        m.removeAllElements();
+        for (int i = 0; i < displayItems.size(); i++) {
+            if (text.isBlank() || filterKeys.get(i).toLowerCase().contains(lower)) {
+                m.addElement(displayItems.get(i));
+            }
+        }
+        if (combo.isEditable()) {
+            ((javax.swing.JTextField) combo.getEditor().getEditorComponent()).setText(text);
+        }
+    }
+
     private void resetCombo(javax.swing.JComboBox<String> combo, java.util.List<String> allItems) {
         String current = combo.isEditable()
                 ? ((javax.swing.JTextField) combo.getEditor().getEditorComponent()).getText().trim()
@@ -429,10 +454,72 @@ public class VendaForm extends javax.swing.JFrame {
         combo.setPopupVisible(false);
     }
 
+    private void resetCombo(javax.swing.JComboBox<String> combo, java.util.List<String> displayItems,
+                             java.util.List<String> filterKeys) {
+        String current = combo.isEditable()
+                ? ((javax.swing.JTextField) combo.getEditor().getEditorComponent()).getText().trim()
+                : "";
+        // Se o texto atual é um display "Nome - Cidade", filtra só pelo nome
+        String searchText = current.contains(" - ") ? current.substring(0, current.indexOf(" - ")) : current;
+        combo.setModel(new javax.swing.DefaultComboBoxModel<>());
+        filterCombo(combo, displayItems, filterKeys, searchText);
+        if (combo.isEditable() && !current.isBlank()) {
+            ((javax.swing.JTextField) combo.getEditor().getEditorComponent()).setText(current);
+        }
+        combo.setPopupVisible(false);
+    }
+
     private void clearCombo(javax.swing.JComboBox<String> combo, java.util.List<String> allItems) {
         combo.setPopupVisible(false);
         filterCombo(combo, allItems, "");
         combo.setSelectedItem(null);
+    }
+
+    private void setupSubstringAutoComplete(javax.swing.JComboBox<String> combo,
+                                             java.util.List<String> displayItems,
+                                             java.util.List<String> filterKeys) {
+        javax.swing.JTextField editor = (javax.swing.JTextField) combo.getEditor().getEditorComponent();
+        editor.addKeyListener(new java.awt.event.KeyAdapter() {
+            private void applySelection() {
+                int idx = combo.getSelectedIndex();
+                String s = idx >= 0
+                        ? combo.getModel().getElementAt(idx).toString()
+                        : combo.getModel().getSize() > 0 ? combo.getModel().getElementAt(0).toString() : null;
+                if (s != null) {
+                    editor.setText(s);
+                    combo.setSelectedItem(s);
+                }
+            }
+
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                int code = e.getKeyCode();
+                if (!combo.isPopupVisible()) return;
+                if (code == java.awt.event.KeyEvent.VK_ENTER || code == java.awt.event.KeyEvent.VK_TAB) {
+                    applySelection();
+                    if (code == java.awt.event.KeyEvent.VK_TAB) e.consume();
+                    combo.setPopupVisible(false);
+                }
+            }
+
+            @Override
+            public void keyReleased(java.awt.event.KeyEvent e) {
+                int code = e.getKeyCode();
+                if (code == java.awt.event.KeyEvent.VK_ENTER
+                        || code == java.awt.event.KeyEvent.VK_ESCAPE) {
+                    combo.setPopupVisible(false);
+                    return;
+                }
+                if (code == java.awt.event.KeyEvent.VK_UP
+                        || code == java.awt.event.KeyEvent.VK_DOWN
+                        || code == java.awt.event.KeyEvent.VK_TAB) {
+                    return;
+                }
+                String text = editor.getText();
+                filterCombo(combo, displayItems, filterKeys, text);
+                combo.setPopupVisible(!text.isBlank() && combo.getModel().getSize() > 0);
+            }
+        });
     }
 
     private void setupSubstringAutoComplete(javax.swing.JComboBox<String> combo, java.util.List<String> allItems) {
