@@ -438,6 +438,28 @@ public class VendaForm extends javax.swing.JFrame {
     private void setupSubstringAutoComplete(javax.swing.JComboBox<String> combo, java.util.List<String> allItems) {
         javax.swing.JTextField editor = (javax.swing.JTextField) combo.getEditor().getEditorComponent();
         editor.addKeyListener(new java.awt.event.KeyAdapter() {
+            private void applySelection() {
+                int idx = combo.getSelectedIndex();
+                String s = idx >= 0
+                        ? combo.getModel().getElementAt(idx).toString()
+                        : combo.getModel().getSize() > 0 ? combo.getModel().getElementAt(0).toString() : null;
+                if (s != null) {
+                    editor.setText(s);
+                    combo.setSelectedItem(s);
+                }
+            }
+
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                int code = e.getKeyCode();
+                if (!combo.isPopupVisible()) return;
+                if (code == java.awt.event.KeyEvent.VK_ENTER || code == java.awt.event.KeyEvent.VK_TAB) {
+                    applySelection();
+                    if (code == java.awt.event.KeyEvent.VK_TAB) e.consume();
+                    combo.setPopupVisible(false);
+                }
+            }
+
             @Override
             public void keyReleased(java.awt.event.KeyEvent e) {
                 int code = e.getKeyCode();
@@ -447,7 +469,8 @@ public class VendaForm extends javax.swing.JFrame {
                     return;
                 }
                 if (code == java.awt.event.KeyEvent.VK_UP
-                        || code == java.awt.event.KeyEvent.VK_DOWN) {
+                        || code == java.awt.event.KeyEvent.VK_DOWN
+                        || code == java.awt.event.KeyEvent.VK_TAB) {
                     return;
                 }
                 String text = editor.getText();
@@ -746,6 +769,7 @@ public class VendaForm extends javax.swing.JFrame {
             }
 
             txtQuantidade.setText("");
+            clearCombo(cmbLivro, allLivroNames);
 
             // recalcula total e atualiza label de desconto (internamente)
             updateTotal();
