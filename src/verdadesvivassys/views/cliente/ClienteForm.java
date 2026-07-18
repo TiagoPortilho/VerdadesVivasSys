@@ -4,7 +4,6 @@
  */
 package verdadesvivassys.views.cliente;
 
-import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import verdadesvivassys.model.Cliente;
 
 /**
@@ -15,6 +14,7 @@ public class ClienteForm extends javax.swing.JFrame {
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(ClienteForm.class.getName());
     private int editId = -1;
+    private final java.util.List<String> allCidadeNames = new java.util.ArrayList<>();
 
     public ClienteForm() {
         initComponents();
@@ -28,6 +28,7 @@ public class ClienteForm extends javax.swing.JFrame {
         initCustom();
         setResizable(false);
 
+        this.editId = cliente.getId();
         lblTitulo.setText("Editar Cliente");
 
         // Preenche campos de texto
@@ -66,21 +67,22 @@ public class ClienteForm extends javax.swing.JFrame {
 
     private void initCustom() {
         loadCidades();
-        AutoCompleteDecorator.decorate(cmbCidades); // autocomplete ativado
+        cmbCidades.setEditable(true);
+        cmbCidades.setSelectedItem(null);
+        setupSubstringAutoComplete(cmbCidades, allCidadeNames);
         btnAddCidade.addActionListener(e -> addCidade());
     }
 
     private void loadCidades() {
-        cmbCidades.removeAllItems();
+        allCidadeNames.clear();
         var cidades = verdadesvivassys.dao.DAOFactory.getClientesDAO().getAllCidades();
 
         if (cidades.isEmpty()) {
-            cmbCidades.addItem("Nenhuma cidade cadastrada");
+            cmbCidades.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{"Nenhuma cidade cadastrada"}));
             cmbCidades.setEnabled(false);
         } else {
-            for (String cidade : cidades) {
-                cmbCidades.addItem(cidade);
-            }
+            cidades.forEach(allCidadeNames::add);
+            resetCombo(cmbCidades, allCidadeNames);
             cmbCidades.setEnabled(true);
         }
     }
@@ -148,11 +150,10 @@ public class ClienteForm extends javax.swing.JFrame {
     private boolean verify() {
         try {
             if (txtNome.getText().trim().isEmpty()
-                    || txtContato.getText().trim().isEmpty()
                     || cmbCidades.getSelectedItem() == null
                     || cmbCidades.getSelectedItem().toString().equals("Nenhuma cidade cadastrada")) {
                 javax.swing.JOptionPane.showMessageDialog(this,
-                        "Todos os campos devem ser preenchidos.",
+                        "Nome e Cidade devem ser preenchidos.",
                         "Erro de validacao",
                         javax.swing.JOptionPane.WARNING_MESSAGE);
                 return false;
@@ -199,6 +200,10 @@ public class ClienteForm extends javax.swing.JFrame {
 
     private void addCliente() {
         try {
+            if (txtContato.getText().trim().isEmpty()) {
+                txtContato.setText("(19) 9999-9999");
+            }
+
             if (!verify()) {
                 return;
             }
@@ -245,7 +250,10 @@ public class ClienteForm extends javax.swing.JFrame {
         txtNome.setText("");
         txtContato.setText("");
         txtAddCidade.setText("");
-        if (cmbCidades.getItemCount() > 0) {
+        if (cmbCidades.isEditable()) {
+            filterCombo(cmbCidades, allCidadeNames, "");
+            cmbCidades.setSelectedItem(null);
+        } else if (cmbCidades.getItemCount() > 0) {
             cmbCidades.setSelectedIndex(0);
         }
         txtNome.requestFocus();
@@ -283,6 +291,49 @@ public class ClienteForm extends javax.swing.JFrame {
                 }
 
                 txtContato.setText(formatado);
+            }
+        });
+    }
+
+    private void filterCombo(javax.swing.JComboBox<String> combo, java.util.List<String> allItems, String text) {
+        String lower = text.toLowerCase();
+        javax.swing.DefaultComboBoxModel<String> m = (javax.swing.DefaultComboBoxModel<String>) combo.getModel();
+        m.removeAllElements();
+        allItems.stream()
+                .filter(item -> text.isBlank() || item.toLowerCase().contains(lower))
+                .forEach(m::addElement);
+        if (combo.isEditable()) {
+            ((javax.swing.JTextField) combo.getEditor().getEditorComponent()).setText(text);
+        }
+    }
+
+    private void resetCombo(javax.swing.JComboBox<String> combo, java.util.List<String> allItems) {
+        String current = combo.isEditable()
+                ? ((javax.swing.JTextField) combo.getEditor().getEditorComponent()).getText().trim()
+                : "";
+        combo.setModel(new javax.swing.DefaultComboBoxModel<>());
+        filterCombo(combo, allItems, current);
+        combo.setPopupVisible(false);
+    }
+
+    private void setupSubstringAutoComplete(javax.swing.JComboBox<String> combo, java.util.List<String> allItems) {
+        javax.swing.JTextField editor = (javax.swing.JTextField) combo.getEditor().getEditorComponent();
+        editor.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyReleased(java.awt.event.KeyEvent e) {
+                int code = e.getKeyCode();
+                if (code == java.awt.event.KeyEvent.VK_ENTER
+                        || code == java.awt.event.KeyEvent.VK_ESCAPE) {
+                    combo.setPopupVisible(false);
+                    return;
+                }
+                if (code == java.awt.event.KeyEvent.VK_UP
+                        || code == java.awt.event.KeyEvent.VK_DOWN) {
+                    return;
+                }
+                String text = editor.getText();
+                filterCombo(combo, allItems, text);
+                combo.setPopupVisible(!text.isBlank() && combo.getModel().getSize() > 0);
             }
         });
     }

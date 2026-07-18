@@ -35,7 +35,6 @@ import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
-import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import verdadesvivassys.connection.DatabaseConfig;
 import verdadesvivassys.dao.ClientesDAO;
 import verdadesvivassys.dao.DAOFactory;
@@ -56,6 +55,11 @@ public class Menu extends javax.swing.JFrame {
     private static final Pattern RELEASE_TAG_PATTERN = Pattern.compile("\"tag_name\"\\s*:\\s*\"([^\"]+)\"");
     private static final Pattern JAR_DOWNLOAD_PATTERN = Pattern.compile("\"browser_download_url\"\\s*:\\s*\"([^\"]+\\.jar)\"");
 
+    private final java.util.List<String> allClienteNames = new java.util.ArrayList<>();
+    private final java.util.List<String> allLivroNames   = new java.util.ArrayList<>();
+    private final java.util.List<String> allCidadeNames  = new java.util.ArrayList<>();
+    private final java.util.List<String> allCodigoLivros = new java.util.ArrayList<>();
+
     private LivrosDAO livrosDAO = DAOFactory.getLivrosDAO();
     private ClientesDAO clientesDAO = DAOFactory.getClientesDAO();
     private VendasDAO vendasDAO = DAOFactory.getVendasDAO();
@@ -65,6 +69,7 @@ public class Menu extends javax.swing.JFrame {
         initComponents();
         setResizable(false);
 
+        // Carrega dados antes de tornar os combos editáveis (evita "Item 1" do NetBeans)
         carregarLivrosNaTabela();
         carregarClientesNaTabela();
         carregarVendasNaTabela();
@@ -73,14 +78,28 @@ public class Menu extends javax.swing.JFrame {
         loadLivros();
         loadCidades();
 
-        AutoCompleteDecorator.decorate(cmbCliente);
-        AutoCompleteDecorator.decorate(cmbLivros);
-        AutoCompleteDecorator.decorate(cmbCidades);
-        AutoCompleteDecorator.decorate(cmbClientes2);
-        AutoCompleteDecorator.decorate(cmbCidades2);
-        AutoCompleteDecorator.decorate(cmbLivros);
-        AutoCompleteDecorator.decorate(cmbNomeLivro);
-        AutoCompleteDecorator.decorate(cmbCodigoLivro);
+        // Agora ativa edição e configura autocomplete por substring
+        cmbCliente.setEditable(true);
+        cmbLivros.setEditable(true);
+        cmbCidades.setEditable(true);
+        cmbClientes2.setEditable(true);
+        cmbCidades2.setEditable(true);
+        cmbNomeLivro.setEditable(true);
+        cmbCodigoLivro.setEditable(true);
+
+        for (javax.swing.JComboBox<String> c : new javax.swing.JComboBox[]{
+                cmbCliente, cmbLivros, cmbCidades, cmbClientes2,
+                cmbCidades2, cmbNomeLivro, cmbCodigoLivro}) {
+            ((javax.swing.JTextField) c.getEditor().getEditorComponent()).setText("");
+        }
+
+        setupSubstringAutoComplete(cmbCliente,    allClienteNames);
+        setupSubstringAutoComplete(cmbLivros,     allLivroNames);
+        setupSubstringAutoComplete(cmbCidades,    allCidadeNames);
+        setupSubstringAutoComplete(cmbClientes2,  allClienteNames);
+        setupSubstringAutoComplete(cmbCidades2,   allCidadeNames);
+        setupSubstringAutoComplete(cmbNomeLivro,  allLivroNames);
+        setupSubstringAutoComplete(cmbCodigoLivro, allCodigoLivros);
 
         this.addWindowFocusListener(new java.awt.event.WindowFocusListener() {
             @Override
@@ -128,34 +147,23 @@ public class Menu extends javax.swing.JFrame {
     }
 
     private void loadLivros() {
-        cmbLivros.removeAllItems();
-        cmbNomeLivro.removeAllItems();
-        cmbCodigoLivro.removeAllItems();
-
+        allLivroNames.clear();
+        allCodigoLivros.clear();
         for (Livro l : livrosDAO.getAllLivros()) {
             if (l != null) {
-                if (l.getNome() != null && !l.getNome().isBlank()) {
-                    cmbLivros.addItem(l.getNome());
-                    cmbNomeLivro.addItem(l.getNome());
-                }
-                if (l.getCodigo() != null && !l.getCodigo().isBlank()) {
-                    cmbCodigoLivro.addItem(l.getCodigo());
-                }
+                if (l.getNome() != null && !l.getNome().isBlank())     allLivroNames.add(l.getNome());
+                if (l.getCodigo() != null && !l.getCodigo().isBlank()) allCodigoLivros.add(l.getCodigo());
             }
         }
-
-        AutoCompleteDecorator.decorate(cmbLivros);
-        AutoCompleteDecorator.decorate(cmbNomeLivro);
-        AutoCompleteDecorator.decorate(cmbCodigoLivro);
-
-        cmbLivros.setSelectedIndex(-1);
-        cmbNomeLivro.setSelectedIndex(-1);
-        cmbCodigoLivro.setSelectedIndex(-1);
+        resetCombo(cmbLivros,      allLivroNames);
+        resetCombo(cmbNomeLivro,   allLivroNames);
+        resetCombo(cmbCodigoLivro, allCodigoLivros);
     }
 
     // =================**Clientes**=================
     private void carregarClientesNaTabela() {
         List<Cliente> clientes = clientesDAO.getAllClientes();
+        clientes.sort((a, b) -> b.getId() - a.getId());
 
         DefaultTableModel model = (DefaultTableModel) tblClientes.getModel();
         model.setRowCount(0);
@@ -179,44 +187,25 @@ public class Menu extends javax.swing.JFrame {
     }
 
     private void loadClientes() {
-        cmbCliente.removeAllItems();
-        cmbClientes2.removeAllItems(); // novo
-
+        allClienteNames.clear();
         for (Cliente c : clientesDAO.getAllClientes()) {
             if (c != null && c.getNome() != null && !c.getNome().isBlank()) {
-                cmbCliente.addItem(c.getNome());
-                cmbClientes2.addItem(c.getNome()); // adiciona no segundo combo também
+                allClienteNames.add(c.getNome());
             }
         }
-
-        // aplicar autocomplete nos dois
-        AutoCompleteDecorator.decorate(cmbCliente);
-        AutoCompleteDecorator.decorate(cmbClientes2);
-
-        cmbCliente.setSelectedIndex(-1);
-        cmbClientes2.setSelectedIndex(-1);
+        resetCombo(cmbCliente,   allClienteNames);
+        resetCombo(cmbClientes2, allClienteNames);
     }
 
     private void loadCidades() {
-        cmbCidades.removeAllItems();
-        cmbCidades2.removeAllItems();
-
-        List<String> cidades = clientesDAO.getAllCidades().stream()
+        allCidadeNames.clear();
+        clientesDAO.getAllCidades().stream()
                 .filter(c -> c != null && !c.isBlank())
                 .distinct()
                 .sorted(String::compareToIgnoreCase)
-                .collect(Collectors.toList());
-
-        cidades.forEach(c -> {
-            cmbCidades.addItem(c);
-            cmbCidades2.addItem(c);
-        });
-
-        AutoCompleteDecorator.decorate(cmbCidades);
-        AutoCompleteDecorator.decorate(cmbCidades2);
-
-        cmbCidades.setSelectedIndex(-1);
-        cmbCidades2.setSelectedIndex(-1);
+                .forEach(allCidadeNames::add);
+        resetCombo(cmbCidades,  allCidadeNames);
+        resetCombo(cmbCidades2, allCidadeNames);
     }
 
     // =================**Vendas**=================
@@ -313,6 +302,60 @@ public class Menu extends javax.swing.JFrame {
 
     private static boolean isBlank(String text) {
         return text == null || text.isBlank();
+    }
+
+    private String getComboText(javax.swing.JComboBox<String> combo) {
+        if (!combo.isEditable()) return "";
+        if (combo.getEditor().getEditorComponent() instanceof javax.swing.JTextField tf) {
+            return tf.getText().trim();
+        }
+        return "";
+    }
+
+    private void filterCombo(javax.swing.JComboBox<String> combo, java.util.List<String> allItems, String text) {
+        String lower = text.toLowerCase();
+        javax.swing.DefaultComboBoxModel<String> model = (javax.swing.DefaultComboBoxModel<String>) combo.getModel();
+        model.removeAllElements();
+        allItems.stream()
+                .filter(item -> text.isBlank() || item.toLowerCase().contains(lower))
+                .forEach(model::addElement);
+        if (combo.isEditable()) {
+            ((javax.swing.JTextField) combo.getEditor().getEditorComponent()).setText(text);
+        }
+    }
+
+    private void resetCombo(javax.swing.JComboBox<String> combo, java.util.List<String> allItems) {
+        String current = getComboText(combo);
+        combo.setModel(new javax.swing.DefaultComboBoxModel<>());
+        filterCombo(combo, allItems, current);
+        combo.setPopupVisible(false);
+    }
+
+    private void clearCombo(javax.swing.JComboBox<String> combo, java.util.List<String> allItems) {
+        combo.setPopupVisible(false);
+        filterCombo(combo, allItems, "");
+    }
+
+    private void setupSubstringAutoComplete(javax.swing.JComboBox<String> combo, java.util.List<String> allItems) {
+        javax.swing.JTextField editor = (javax.swing.JTextField) combo.getEditor().getEditorComponent();
+        editor.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyReleased(java.awt.event.KeyEvent e) {
+                int code = e.getKeyCode();
+                if (code == java.awt.event.KeyEvent.VK_ENTER
+                        || code == java.awt.event.KeyEvent.VK_ESCAPE) {
+                    combo.setPopupVisible(false);
+                    return;
+                }
+                if (code == java.awt.event.KeyEvent.VK_UP
+                        || code == java.awt.event.KeyEvent.VK_DOWN) {
+                    return;
+                }
+                String text = editor.getText();
+                filterCombo(combo, allItems, text);
+                combo.setPopupVisible(!text.isBlank() && combo.getModel().getSize() > 0);
+            }
+        });
     }
 
     private void exportDatabaseCopy(Path destinationPath) throws IOException {
@@ -1486,37 +1529,40 @@ public class Menu extends javax.swing.JFrame {
     }//GEN-LAST:event_cmbLivrosActionPerformed
 
     private void btnFiltrarVendasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFiltrarVendasActionPerformed
-        String clienteSelecionado = (String) cmbCliente.getSelectedItem();
-        String livroSelecionado = (String) cmbLivros.getSelectedItem();
-        String cidadeSelecionada = (String) cmbCidades.getSelectedItem();
+        String clienteSelecionado = getComboText(cmbCliente);
+        String livroSelecionado = getComboText(cmbLivros);
+        String cidadeSelecionada = getComboText(cmbCidades);
 
         List<Venda> vendas = vendasDAO.getAllVendas();
 
         // Filtro por cliente
-        if (clienteSelecionado != null && !clienteSelecionado.isBlank()) {
+        if (!clienteSelecionado.isBlank()) {
+            String termo = clienteSelecionado.toLowerCase();
             vendas = vendas.stream()
                     .filter(v -> v.getCliente() != null
                     && v.getCliente().getNome() != null
-                    && v.getCliente().getNome().equalsIgnoreCase(clienteSelecionado))
+                    && v.getCliente().getNome().toLowerCase().contains(termo))
                     .collect(Collectors.toList());
         }
 
         // Filtro por cidade
-        if (cidadeSelecionada != null && !cidadeSelecionada.isBlank()) {
+        if (!cidadeSelecionada.isBlank()) {
+            String termo = cidadeSelecionada.toLowerCase();
             vendas = vendas.stream()
                     .filter(v -> v.getCliente() != null
                     && v.getCliente().getCidade() != null
-                    && v.getCliente().getCidade().equalsIgnoreCase(cidadeSelecionada))
+                    && v.getCliente().getCidade().toLowerCase().contains(termo))
                     .collect(Collectors.toList());
         }
 
         // Filtro por livro
-        if (livroSelecionado != null && !livroSelecionado.isBlank()) {
+        if (!livroSelecionado.isBlank()) {
+            String termo = livroSelecionado.toLowerCase();
             vendas = vendas.stream()
                     .filter(v -> v.getLivros() != null
                     && v.getLivros().stream()
                             .anyMatch(l -> l.getNome() != null
-                            && l.getNome().equalsIgnoreCase(livroSelecionado)))
+                            && l.getNome().toLowerCase().contains(termo)))
                     .collect(Collectors.toList());
         }
 
@@ -1527,7 +1573,7 @@ public class Menu extends javax.swing.JFrame {
         for (Venda venda : vendas) {
             String nomeCliente = venda.getCliente() != null ? venda.getCliente().getNome() : "—";
 
-            Map<String, Integer> mapaQtd = venda.getLivros().stream()
+            Map<String, Integer> mapaQtd = (venda.getLivros() == null ? List.<Livro>of() : venda.getLivros()).stream()
                     .collect(Collectors.toMap(
                             Livro::getNome,
                             Livro::getQuantidade,
@@ -1550,9 +1596,9 @@ public class Menu extends javax.swing.JFrame {
     }//GEN-LAST:event_btnFiltrarVendasActionPerformed
 
     private void btnLimparVendasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimparVendasActionPerformed
-        cmbCliente.setSelectedIndex(-1);
-        cmbLivros.setSelectedIndex(-1);
-        cmbCidades.setSelectedIndex(-1);
+        clearCombo(cmbCliente, allClienteNames);
+        clearCombo(cmbLivros,  allLivroNames);
+        clearCombo(cmbCidades, allCidadeNames);
         carregarVendasNaTabela();
     }//GEN-LAST:event_btnLimparVendasActionPerformed
 
@@ -1565,27 +1611,28 @@ public class Menu extends javax.swing.JFrame {
     }//GEN-LAST:event_cmbCidades2ActionPerformed
 
     private void btnLimpar2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimpar2ActionPerformed
-        cmbClientes2.setSelectedIndex(-1);
-        cmbCidades2.setSelectedIndex(-1);
+        clearCombo(cmbClientes2, allClienteNames);
+        clearCombo(cmbCidades2,  allCidadeNames);
         carregarClientesNaTabela();
     }//GEN-LAST:event_btnLimpar2ActionPerformed
 
     private void btnFiltrar2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFiltrar2ActionPerformed
-        String nomeSelecionado = (String) cmbClientes2.getSelectedItem();
-        String cidadeSelecionada = (String) cmbCidades2.getSelectedItem();
+        String nomeSelecionado = getComboText(cmbClientes2);
+        String cidadeSelecionada = getComboText(cmbCidades2);
 
         List<Cliente> clientes = clientesDAO.getAllClientes();
 
-        // aplica filtros cumulativos
-        if (nomeSelecionado != null && !nomeSelecionado.isBlank()) {
+        if (!nomeSelecionado.isBlank()) {
+            String termo = nomeSelecionado.toLowerCase();
             clientes = clientes.stream()
-                    .filter(c -> c.getNome() != null && c.getNome().equalsIgnoreCase(nomeSelecionado))
+                    .filter(c -> c.getNome() != null && c.getNome().toLowerCase().contains(termo))
                     .collect(Collectors.toList());
         }
 
-        if (cidadeSelecionada != null && !cidadeSelecionada.isBlank()) {
+        if (!cidadeSelecionada.isBlank()) {
+            String termo = cidadeSelecionada.toLowerCase();
             clientes = clientes.stream()
-                    .filter(c -> c.getCidade() != null && c.getCidade().equalsIgnoreCase(cidadeSelecionada))
+                    .filter(c -> c.getCidade() != null && c.getCidade().toLowerCase().contains(termo))
                     .collect(Collectors.toList());
         }
 
@@ -1604,22 +1651,22 @@ public class Menu extends javax.swing.JFrame {
     }//GEN-LAST:event_btnFiltrar2ActionPerformed
 
     private void btnFiltrar3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFiltrar3ActionPerformed
-        String nomeSelecionado = (String) cmbNomeLivro.getSelectedItem();
-        String codigoSelecionado = (String) cmbCodigoLivro.getSelectedItem();
+        String nomeSelecionado = getComboText(cmbNomeLivro);
+        String codigoSelecionado = getComboText(cmbCodigoLivro);
 
         List<Livro> livros = livrosDAO.getAllLivros();
 
-        // Filtro por nome
-        if (nomeSelecionado != null && !nomeSelecionado.isBlank()) {
+        if (!nomeSelecionado.isBlank()) {
+            String termo = nomeSelecionado.toLowerCase();
             livros = livros.stream()
-                    .filter(l -> l.getNome() != null && l.getNome().equalsIgnoreCase(nomeSelecionado))
+                    .filter(l -> l.getNome() != null && l.getNome().toLowerCase().contains(termo))
                     .collect(Collectors.toList());
         }
 
-        // Filtro por código
-        if (codigoSelecionado != null && !codigoSelecionado.isBlank()) {
+        if (!codigoSelecionado.isBlank()) {
+            String termo = codigoSelecionado.toLowerCase();
             livros = livros.stream()
-                    .filter(l -> l.getCodigo() != null && l.getCodigo().equalsIgnoreCase(codigoSelecionado))
+                    .filter(l -> l.getCodigo() != null && l.getCodigo().toLowerCase().contains(termo))
                     .collect(Collectors.toList());
         }
 
@@ -1638,8 +1685,8 @@ public class Menu extends javax.swing.JFrame {
     }//GEN-LAST:event_btnFiltrar3ActionPerformed
 
     private void btnLimpar3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimpar3ActionPerformed
-        cmbNomeLivro.setSelectedIndex(-1);
-        cmbCodigoLivro.setSelectedIndex(-1);
+        clearCombo(cmbNomeLivro,   allLivroNames);
+        clearCombo(cmbCodigoLivro, allCodigoLivros);
         carregarLivrosNaTabela();
     }//GEN-LAST:event_btnLimpar3ActionPerformed
 

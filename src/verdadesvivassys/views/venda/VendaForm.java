@@ -4,7 +4,6 @@ import verdadesvivassys.views.cliente.ClienteForm;
 import java.lang.System.Logger.Level;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
-import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import verdadesvivassys.dao.ClientesDAO;
 import verdadesvivassys.dao.DAOFactory;
 import verdadesvivassys.dao.LivrosDAO;
@@ -19,6 +18,8 @@ public class VendaForm extends javax.swing.JFrame {
     private LivrosDAO livrosDAO = DAOFactory.getLivrosDAO();
     private ClientesDAO clientesDAO = DAOFactory.getClientesDAO();
     private int editid = -1;
+    private final java.util.List<String> allClienteNames = new java.util.ArrayList<>();
+    private final java.util.List<String> allLivroNames   = new java.util.ArrayList<>();
 
     public VendaForm() {
         initComponents();
@@ -26,9 +27,14 @@ public class VendaForm extends javax.swing.JFrame {
         loadLivros();
         setResizable(false);
 
+        cmbCliente.setEditable(true);
+        cmbLivro.setEditable(true);
+        cmbCliente.setSelectedItem(null);
+        cmbLivro.setSelectedItem(null);
+        setupSubstringAutoComplete(cmbCliente, allClienteNames);
+        setupSubstringAutoComplete(cmbLivro, allLivroNames);
+
         clearFields();
-        AutoCompleteDecorator.decorate(cmbCliente);
-        AutoCompleteDecorator.decorate(cmbLivro);
 
         this.addWindowFocusListener(new java.awt.event.WindowFocusListener() {
             @Override
@@ -52,8 +58,12 @@ public class VendaForm extends javax.swing.JFrame {
 
         this.editid = venda.getId();
 
-        AutoCompleteDecorator.decorate(cmbCliente);
-        AutoCompleteDecorator.decorate(cmbLivro);
+        cmbCliente.setEditable(true);
+        cmbLivro.setEditable(true);
+        cmbCliente.setSelectedItem(null);
+        cmbLivro.setSelectedItem(null);
+        setupSubstringAutoComplete(cmbCliente, allClienteNames);
+        setupSubstringAutoComplete(cmbLivro, allLivroNames);
 
         // título adaptado
         lblTitulo.setText("Editar Venda #" + venda.getId());
@@ -95,17 +105,23 @@ public class VendaForm extends javax.swing.JFrame {
     }
 
     private void loadClientes() {
-        cmbCliente.removeAllItems();
+        allClienteNames.clear();
         for (Cliente c : clientesDAO.getAllClientes()) {
-            cmbCliente.addItem(c.getNome());
+            if (c.getNome() != null && !c.getNome().isBlank()) {
+                allClienteNames.add(c.getNome());
+            }
         }
+        resetCombo(cmbCliente, allClienteNames);
     }
 
     private void loadLivros() {
-        cmbLivro.removeAllItems();
+        allLivroNames.clear();
         for (Livro l : livrosDAO.getAllLivros()) {
-            cmbLivro.addItem(l.getNome());
+            if (l.getNome() != null && !l.getNome().isBlank()) {
+                allLivroNames.add(l.getNome());
+            }
         }
+        resetCombo(cmbLivro, allLivroNames);
     }
 
     private void updateTotal() {
@@ -312,8 +328,8 @@ public class VendaForm extends javax.swing.JFrame {
     }
 
     private void clearFields() {
-        cmbCliente.setSelectedIndex(-1);
-        cmbLivro.setSelectedIndex(-1);
+        clearCombo(cmbCliente, allClienteNames);
+        clearCombo(cmbLivro, allLivroNames);
         DefaultTableModel model = (DefaultTableModel) tblLivros.getModel();
         model.setRowCount(0);
         lblTotal.setText("Valor Total: R$ 0,00");
@@ -390,6 +406,55 @@ public class VendaForm extends javax.swing.JFrame {
         }
 
         return preco;
+    }
+
+    private void filterCombo(javax.swing.JComboBox<String> combo, java.util.List<String> allItems, String text) {
+        String lower = text.toLowerCase();
+        javax.swing.DefaultComboBoxModel<String> m = (javax.swing.DefaultComboBoxModel<String>) combo.getModel();
+        m.removeAllElements();
+        allItems.stream()
+                .filter(item -> text.isBlank() || item.toLowerCase().contains(lower))
+                .forEach(m::addElement);
+        if (combo.isEditable()) {
+            ((javax.swing.JTextField) combo.getEditor().getEditorComponent()).setText(text);
+        }
+    }
+
+    private void resetCombo(javax.swing.JComboBox<String> combo, java.util.List<String> allItems) {
+        String current = combo.isEditable()
+                ? ((javax.swing.JTextField) combo.getEditor().getEditorComponent()).getText().trim()
+                : "";
+        combo.setModel(new javax.swing.DefaultComboBoxModel<>());
+        filterCombo(combo, allItems, current);
+        combo.setPopupVisible(false);
+    }
+
+    private void clearCombo(javax.swing.JComboBox<String> combo, java.util.List<String> allItems) {
+        combo.setPopupVisible(false);
+        filterCombo(combo, allItems, "");
+        combo.setSelectedItem(null);
+    }
+
+    private void setupSubstringAutoComplete(javax.swing.JComboBox<String> combo, java.util.List<String> allItems) {
+        javax.swing.JTextField editor = (javax.swing.JTextField) combo.getEditor().getEditorComponent();
+        editor.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyReleased(java.awt.event.KeyEvent e) {
+                int code = e.getKeyCode();
+                if (code == java.awt.event.KeyEvent.VK_ENTER
+                        || code == java.awt.event.KeyEvent.VK_ESCAPE) {
+                    combo.setPopupVisible(false);
+                    return;
+                }
+                if (code == java.awt.event.KeyEvent.VK_UP
+                        || code == java.awt.event.KeyEvent.VK_DOWN) {
+                    return;
+                }
+                String text = editor.getText();
+                filterCombo(combo, allItems, text);
+                combo.setPopupVisible(!text.isBlank() && combo.getModel().getSize() > 0);
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")
@@ -713,11 +778,7 @@ public class VendaForm extends javax.swing.JFrame {
     }//GEN-LAST:event_btnRemoverLivroActionPerformed
 
     private void btnLimparActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimparActionPerformed
-        cmbCliente.setSelectedIndex(-1);
-        cmbLivro.setSelectedIndex(-1);
-        DefaultTableModel model = (DefaultTableModel) tblLivros.getModel();
-        model.setRowCount(0);
-        lblTotal.setText("Valor Total: R$ 0,00");
+        clearFields();
     }//GEN-LAST:event_btnLimparActionPerformed
 
     private void btnConfirmarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConfirmarActionPerformed
