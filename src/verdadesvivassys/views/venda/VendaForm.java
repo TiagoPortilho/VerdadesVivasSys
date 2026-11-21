@@ -356,31 +356,31 @@ public class VendaForm extends javax.swing.JFrame {
         switch (cod) {
             case "CBO": // Calendário de Bolso (50 uni)
                 if (quantidade >= 80) {
-                    preco = 5.25f;
+                    preco = 5.40f;
                 } else if (quantidade >= 48) {
-                    preco = 6.30f;
+                    preco = 6.48f;
                 } else if (quantidade >= 24) {
-                    preco = 7.35f;
+                    preco = 7.56f;
                 } else if (quantidade >= 12) {
-                    preco = 8.40f;
+                    preco = 8.64f;
                 } else if (quantidade >= 4) {
-                    preco = 9.45f;
+                    preco = 9.72f;
                 } else {
-                    preco = 10.50f;
+                    preco = 10.80f;
                 }
                 break;
 
             case "CPA": // Calendário de Parede - 12 pág.
                 if (quantidade >= 300) {
-                    preco = 4.20f;
+                    preco = 5.70f;
                 } else if (quantidade >= 100) {
-                    preco = 4.90f;
+                    preco = 6.65f;
                 } else if (quantidade >= 30) {
-                    preco = 5.60f;
+                    preco = 7.60f;
                 } else if (quantidade >= 10) {
-                    preco = 6.30f;
+                    preco = 8.55f;
                 } else {
-                    preco = 7.00f;
+                    preco = 9.50f;
                 }
                 break;
 
@@ -402,15 +402,15 @@ public class VendaForm extends javax.swing.JFrame {
 
             case "CP4": // Calendário de Parede - 4 pág.
                 if (quantidade >= 300) {
-                    preco = 1.56f;
+                    preco = 1.59f;
                 } else if (quantidade >= 100) {
-                    preco = 1.82f;
+                    preco = 1.86f;
                 } else if (quantidade >= 30) {
-                    preco = 2.08f;
+                    preco = 2.12f;
                 } else if (quantidade >= 10) {
-                    preco = 2.34f;
+                    preco = 2.39f;
                 } else {
-                    preco = 2.60f;
+                    preco = 2.65f;
                 }
                 break;
         }
